@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "preset": "left",
+  "saved_at": "2026-08-05T18:27:53+08:00",
+  "frame": "left_arm_base",
+  "target": "left_gripper",
+  "units": {
+    "position": "m",
+    "orientation": "rad"
+  },
+  "pose_6d": [
+    0.408904,
+    -0.205998,
+    0.013149,
+    -0.334,
+    1.508,
+    -2.259
+  ],
+  "pose_order": [
+    "x",
+    "y",
+    "z",
+    "rx",
+    "ry",
+    "rz"
+  ],
+  "source": "actual_robot_state"
+}

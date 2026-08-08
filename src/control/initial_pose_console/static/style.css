@@ -1,0 +1,60 @@
+:root {
+  color-scheme: dark; --bg:#07111f; --card:#101e31; --line:#29405e;
+  --text:#edf5ff; --muted:#9bb0c9; --blue:#3187f5; --green:#28d395;
+  --red:#ff5c68; --amber:#ffbf47;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:16px/1.45 system-ui,-apple-system,"Microsoft YaHei",sans-serif; }
+header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--line); background:#091526; position:sticky; top:0; z-index:10; }
+h1,h2,p { margin:0; }
+h1 { font-size:24px; }
+h2 { font-size:19px; margin-bottom:12px; }
+header p { color:var(--muted); font-size:13px; margin-top:3px; }
+main { padding:18px; display:grid; grid-template-columns:minmax(600px,2fr) minmax(360px,1fr); gap:16px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+.viewer { min-width:0; }
+.camera-tabs,.actions,.preset,.head-grid,.connect-row,.capture-buttons { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+button,input,select { border:1px solid var(--line); border-radius:8px; background:#172a43; color:var(--text); padding:10px 13px; font:inherit; }
+button { cursor:pointer; }
+button:hover { border-color:var(--blue); }
+button.active { background:var(--blue); border-color:var(--blue); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.danger { background:#a92735; border-color:var(--red); font-weight:700; }
+.muted { background:#25344a; }
+.screen { margin-top:12px; background:#000; aspect-ratio:16/9; border-radius:11px; overflow:hidden; display:grid; place-items:center; position:relative; }
+.screen img { width:100%; height:100%; object-fit:contain; display:none; }
+.screen #screen-hint { position:absolute; color:#8191a5; }
+.statusline,.live { margin-top:10px; color:var(--muted); }
+.connections { align-self:start; }
+.connect-row { justify-content:flex-end; border-bottom:1px solid #203650; padding:9px 0; }
+.connect-row span { margin-right:auto; }
+.small { font-size:13px; }
+.mono,pre { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+.notice { background:#0a1728; border-left:4px solid var(--blue); padding:10px; margin-top:12px; color:#bed0e6; }
+.warning { border-color:var(--amber); }
+.registry-card { grid-column:1/-1; }
+.registry-toolbar,.registry-create { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+.component-scope { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-top:14px; padding:11px; background:#0a1728; border-radius:9px; }
+.component-scope label { display:flex; gap:6px; align-items:center; color:#bed0e6; }
+.component-scope input { width:18px; height:18px; padding:0; }
+.registry-toolbar label,.registry-create label { color:var(--muted); display:flex; flex-direction:column; gap:4px; }
+.registry-create label:first-child { min-width:330px; }
+.registry-create label:nth-child(2) { min-width:330px; flex:1; }
+details { margin-top:13px; }
+summary { cursor:pointer; color:#bed0e6; }
+.registry-create { margin-top:10px; }
+#registry-preview { max-height:280px; overflow:auto; background:#07111f; padding:12px; border-radius:8px; color:#b9d2ed; white-space:pre-wrap; }
+.controls { grid-column:1/-1; display:grid; grid-template-columns:repeat(2,minmax(380px,1fr)); gap:16px; }
+.pose-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+.pose-grid label,.head-grid label { color:var(--muted); font-size:13px; }
+.pose-grid input,.head-grid input { width:100%; display:block; margin-top:4px; }
+.preset { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
+.log-card { grid-column:1/-1; }
+#log { height:150px; overflow:auto; background:#07111f; padding:12px; border-radius:8px; color:#b9d2ed; white-space:pre-wrap; }
+dialog { width:min(850px,90vw); background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:12px; }
+dialog::backdrop { background:#000a; }
+#json-content { max-height:65vh; overflow:auto; }
+.good { color:var(--green); }
+.bad { color:var(--red); }
+@media(max-width:1050px) { main{grid-template-columns:1fr} .controls{grid-template-columns:1fr} .connections{grid-row:auto} }
+@media(max-width:650px) { main{padding:9px} .controls{grid-template-columns:minmax(0,1fr)} .pose-grid{grid-template-columns:repeat(2,1fr)} header{padding:12px} .registry-create label{min-width:100%!important} }

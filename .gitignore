@@ -1,0 +1,31 @@
+# ROS 2 / colcon 生成目录
+build/
+install/
+log/
+
+# Python 缓存与测试缓存
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+
+# 标定和抓取运行数据（仅保留在本机）
+src/hand_eye_calibration/datasets/
+src/control/grasp_pipeline/runs/
+src/control/initial_pose_console/snapshots/
+src/control/initial_pose_console/logs/
+
+# 自动备份和临时文件
+src/control/grasp_pipeline/config/backups/
+*.bak
+*.bak.*
+*.tmp
+*~
+
+# 本机环境与编辑器文件
+.env
+.env.*
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store

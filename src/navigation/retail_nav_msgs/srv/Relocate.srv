@@ -1,0 +1,9 @@
+string station_id
+float64 x
+float64 y
+float64 yaw
+---
+uint32 error_code
+string error_msg
+string nav_state
+bool localized

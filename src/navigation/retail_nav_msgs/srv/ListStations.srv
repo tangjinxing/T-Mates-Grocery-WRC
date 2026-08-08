@@ -1,0 +1,5 @@
+string map_id
+---
+uint32 error_code
+string error_msg
+StationInfo[] stations

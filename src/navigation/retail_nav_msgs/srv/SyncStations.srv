@@ -1,0 +1,8 @@
+string package_path
+---
+uint32 error_code
+string error_msg
+uint32 station_count
+string stations_file
+string map_name
+string nav_state

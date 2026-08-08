@@ -1,0 +1,227 @@
+# Retail service competition station template: 16 shelf points + 4 business points.
+# 货架组：A/B；货架面：front=正面、back=反面；无后缀及 _2~_4
+# 表示面对货架时从左到右的四等分点。保留既有首点 ID，兼容现有调用。
+# x/y/yaw：填 HMI「导航节点」实测坐标（s2_station_nav_mode:=pose 时走 CreateTaskByPose）。
+# vendor_node_id：填写 XML 拓扑节点 ID；vendor_target_id：填写 RCS 导航任务 ID。
+# 所有标有 TODO 的 0 值仅为模板，真机导航前必须完成标定和点位同步。
+map_name: retail_default
+stations:
+  start:
+    display_name: "起点"
+    x: -1.956
+    y: -0.030
+    yaw: 0
+    arrive_tol_m: 0.10
+    yaw_tol_rad: 0.20
+    max_speed: 0.5
+    vendor_node_id: 1
+    vendor_target_id: 160100001
+
+  shelf_group_a_front:
+    display_name: "货架1正面第1分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_front_2:
+    display_name: "货架1正面第2分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_front_3:
+    display_name: "货架1正面第3分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_front_4:
+    display_name: "货架1正面第4分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_back:
+    display_name: "货架1反面第1分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_back_2:
+    display_name: "货架1反面第2分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_back_3:
+    display_name: "货架1反面第3分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_a_back_4:
+    display_name: "货架1反面第4分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_front:
+    display_name: "货架2正面第1分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_front_2:
+    display_name: "货架2正面第2分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_front_3:
+    display_name: "货架2正面第3分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_front_4:
+    display_name: "货架2正面第4分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_back:
+    display_name: "货架2反面第1分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_back_2:
+    display_name: "货架2反面第2分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_back_3:
+    display_name: "货架2反面第3分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  shelf_group_b_back_4:
+    display_name: "货架2反面第4分段"
+    x: 0.0  # TODO
+    y: 0.0  # TODO
+    yaw: 0.0  # TODO
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 0  # TODO
+
+  restock_desk:
+    display_name: "补货台"
+    x: 2.0
+    y: 6.5
+    yaw: 1.57
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 6
+
+  delivery_desk:
+    display_name: "交付台"
+    x: 0.243
+    y: -0.064
+    yaw: 0.0
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_node_id: 2
+    vendor_target_id: 160100002
+
+  judge_zone_1:
+    display_name: "统一判定区"
+    x: 0.5
+    y: 3.5
+    yaw: 0.0
+    arrive_tol_m: 0.12
+    yaw_tol_rad: 0.25
+    max_speed: 0.5
+    vendor_node_id: 0  # TODO
+    vendor_target_id: 7

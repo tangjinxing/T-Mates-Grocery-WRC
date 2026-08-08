@@ -1,0 +1,18 @@
+# 华汇悟时底盘默认参数（adapter:=woosh）
+retail_nav_bridge:
+  ros__parameters:
+    adapter: woosh
+    status_hz: 10.0
+    pose_hz: 20.0
+    default_max_speed: 0.5
+    default_timeout_sec: 120.0
+    woosh_service_timeout_sec: 30.0
+    woosh_task_type: 1
+    # 默认只接受 stations.yaml 中显式标定的悟时储位号，避免发送天玑业务站点名。
+    woosh_allow_station_id_as_mark: false
+    # 已在目标地图上时可跳过强制 LoadMap（同图 SwitchMap 易超时）。
+    # 真机首次切图仍建议显式 LoadMap；当前 ft11 联调设为 false。
+    woosh_require_explicit_map_name: false
+    # false: Relocate {} 仅记录底盘当前位置；true 才允许把坐标写入 InitRobot。
+    woosh_allow_pose_relocation: false
+    stations_file: ""

@@ -1,0 +1,11 @@
+string map_id
+string map_name
+string notes
+---
+uint32 error_code
+string error_msg
+string package_path
+bool bmap_ok
+string[] exported_files
+string[] format_status
+string nav_state

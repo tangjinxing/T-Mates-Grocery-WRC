@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WRC 整体预设姿态管理台</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div><h1>整体预设姿态管理台</h1><p>按名称分别采集头部、躯干、左臂和右臂实际状态 · 统一写入 preset_poses.yaml</p></div>
+    <button id="stop-all" class="danger">紧急停止运动</button>
+  </header>
+
+  <main>
+    <section class="viewer card">
+      <div class="camera-tabs">
+        <button data-camera="head">头部相机</button>
+        <button data-camera="left">左手相机</button>
+        <button data-camera="right">右手相机</button>
+        <button id="camera-stop" class="muted">释放相机</button>
+        <button id="snapshot">保存当前快照</button>
+      </div>
+      <div class="screen"><img id="video" alt="请选择一台相机"><div id="screen-hint">请选择相机开始 1280×720 实时画面</div></div>
+      <div id="camera-status" class="statusline">相机未启动</div>
+    </section>
+
+    <aside class="card connections">
+      <h2>硬件连接</h2>
+      <div class="connect-row"><span>左臂 169.254.128.18</span><button data-connect="left">连接</button><button data-disconnect="left">断开</button></div>
+      <div class="connect-row"><span>右臂 169.254.128.19</span><button data-connect="right">连接</button><button data-disconnect="right">断开</button></div>
+      <div class="connect-row"><span>头部 /dev/ttyUSB0</span><button id="head-connect">连接</button><button id="head-disconnect">断开</button></div>
+      <div id="hardware-summary" class="mono small"></div>
+      <div class="notice">页面启动不会自动连接或移动硬件。所有运动均需浏览器二次确认，机械臂速度上限为 10%。</div>
+    </aside>
+
+    <section class="card registry-card">
+      <h2>统一预设姿态</h2>
+      <div class="registry-toolbar">
+        <label>当前预设
+          <select id="registry-select"></select>
+        </label>
+        <span id="registry-status" class="statusline">正在读取预设...</span>
+      </div>
+      <div class="component-scope">
+        <span>该预设参与执行：</span>
+        <label><input type="checkbox" data-apply-component="torso">躯干</label>
+        <label><input type="checkbox" data-apply-component="head">头部</label>
+        <label><input type="checkbox" data-apply-component="left_arm">左臂</label>
+        <label><input type="checkbox" data-apply-component="right_arm">右臂</label>
+        <button id="registry-save-scope">保存执行范围</button>
+      </div>
+      <div class="preset capture-buttons">
+        <button data-capture-component="head">保存实际头部 yaw/pitch</button>
+        <button data-capture-component="torso">保存实际躯干高度</button>
+        <button data-capture-component="left_arm">保存实际左臂6D</button>
+        <button data-capture-component="right_arm">保存实际右臂6D</button>
+        <button id="registry-view">查看当前预设</button>
+      </div>
+      <div class="notice">四个部件可以分别连接、分别保存。只有勾选为“参与执行”的部件才会被后续控制代码移动；参与部件为null时预设不可执行，未勾选部件保持不动。</div>
+      <details>
+        <summary>新增其他预设名称</summary>
+        <div class="registry-create">
+          <label>英文ID<input id="registry-new-name" placeholder="例如 shelf_middle_photo_eye_in_hand_left"></label>
+          <label>中文说明<input id="registry-new-description" placeholder="说明该姿态的场景和用途"></label>
+          <button id="registry-create">创建空预设</button>
+        </div>
+      </details>
+      <pre id="registry-preview"></pre>
+    </section>
+
+    <section class="controls">
+      <article class="card arm" data-side="left">
+        <h2>左臂末端（左臂基座系）</h2>
+        <div class="live" id="left-live">尚未连接</div>
+        <div class="pose-grid"></div>
+        <div class="actions"><button data-fill="left">填入实际位姿</button><label>速度 % <input data-speed="left" type="number" min="1" max="10" value="5"></label><button data-move="left">移动到输入位姿</button></div>
+        <div class="notice">需要保存时，请在“统一预设姿态”中选择名称，再点击“保存实际左臂6D”。</div>
+      </article>
+
+      <article class="card arm" data-side="right">
+        <h2>右臂末端（右臂基座系）</h2>
+        <div class="live" id="right-live">尚未连接</div>
+        <div class="pose-grid"></div>
+        <div class="actions"><button data-fill="right">填入实际位姿</button><label>速度 % <input data-speed="right" type="number" min="1" max="10" value="5"></label><button data-move="right">移动到输入位姿</button></div>
+        <div class="notice">需要保存时，请在“统一预设姿态”中选择名称，再点击“保存实际右臂6D”。</div>
+      </article>
+
+      <article class="card">
+        <h2>头部</h2>
+        <div id="head-live" class="live">尚未连接</div>
+        <div class="head-grid"><label>yaw<input id="head-yaw" type="number" min="350" max="650" value="500"></label><label>pitch<input id="head-pitch" type="number" min="350" max="500" value="450"></label><button id="head-fill">填入实际值</button><button id="head-move">移动头部</button></div>
+        <div class="notice">需要保存时，请在“统一预设姿态”中选择名称，再点击“保存实际头部 yaw/pitch”。</div>
+      </article>
+
+      <article class="card">
+        <h2>躯干 / 升降柱</h2>
+        <div id="lift-live" class="live">状态依赖左臂控制器连接</div>
+        <div class="head-grid">
+          <label>目标高度 mm<input id="lift-height" type="number" min="100" max="1350" step="1" value="700"></label>
+          <label>速度 %<input id="lift-speed" type="number" min="1" max="20" step="1" value="10"></label>
+          <button id="lift-fill">填入实际高度</button>
+          <button id="lift-move">移动升降柱</button>
+        </div>
+        <div class="notice warning">安全高度范围100～1350 mm，速度限制1～20%。运动依赖左臂控制器连接，执行前请确认升降柱及双臂周围无障碍物。</div>
+      </article>
+    </section>
+
+    <section class="card log-card"><h2>操作日志</h2><pre id="log"></pre></section>
+  </main>
+
+  <dialog id="json-dialog"><h2>已保存的 JSON</h2><pre id="json-content"></pre><button onclick="this.closest('dialog').close()">关闭</button></dialog>
+  <script src="/static/app.js"></script>
+</body>
+</html>

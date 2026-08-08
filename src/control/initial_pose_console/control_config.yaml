@@ -1,0 +1,65 @@
+server:
+  host: 0.0.0.0
+  port: 8010
+
+paths:
+  camera_api: /home/lh/robot_api/camera_api
+  arm_api: /home/lh/robot_api/arm_api_new
+  head_api: /home/lh/robot_api/head_api1
+
+cameras:
+  head:
+    label: 头部相机
+    serial: "344422070170"
+  left:
+    label: 左手相机
+    serial: "215322079194"
+  right:
+    label: 右手相机
+    serial: "335522072306"
+
+camera_stream:
+  width: 1280
+  height: 720
+  fps: 30
+  warmup_frames: 20
+  preview_width: 1120
+  preview_jpeg_quality: 78
+  preview_fps: 25
+
+arms:
+  left:
+    label: 左臂
+    ip: 169.254.128.18
+    model: left
+  right:
+    label: 右臂
+    ip: 169.254.128.19
+    model: right
+
+motion:
+  default_speed: 5
+  max_speed: 10
+  position_limits_m:
+    x: [-1.0, 1.0]
+    y: [-1.0, 1.0]
+    z: [-1.0, 1.5]
+  euler_limits_rad: [-6.4, 6.4]
+  arrival_position_tolerance_m: 0.01
+  arrival_rotation_tolerance_rad: 0.05
+
+head:
+  port: /dev/ttyUSB0
+  baudrate: 9600
+  yaw_limits: [350, 650]
+  pitch_limits: [350, 500]
+  arrival_tolerance: 8
+
+lift:
+  controller_arm: left
+  enable_motion: true
+  min_height: 100
+  max_height: 1350
+  default_speed: 10
+  max_speed: 20
+  arrival_tolerance: 10

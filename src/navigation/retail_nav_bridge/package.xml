@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>retail_nav_bridge</name>
+  <version>0.1.0</version>
+  <description>Unified mapping/navigation facade for retail service competition (mock/S2/Woosh/LH adapters).</description>
+  <maintainer email="dev@tianji.local">TianJi</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>retail_nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_srvs</depend>
+  <exec_depend>woosh_robot_msgs</exec_depend>
+  <exec_depend>woosh_task_msgs</exec_depend>
+  <!-- adapter:=s2 运行时需同工作空间的 server/slam/move（天机真机，华汇不装） -->
+  <!-- adapter:=lh 运行时需 lh_chassis_interfaces（云迹 WATER，华汇默认真机不装） -->
+  <!-- adapter:=woosh 运行时使用上面的悟时消息包（华汇 deb） -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

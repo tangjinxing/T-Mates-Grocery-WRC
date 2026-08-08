@@ -1,0 +1,24 @@
+schema_version: 1
+description: 货架抓取首选接近方向；方向均在对应机械臂基座系表达
+
+level_profiles:
+  upper: shelf_front_left
+  middle: shelf_front_left
+
+profiles:
+  shelf_front_left:
+    description: 左臂从货架正面水平接近；由一次理想抓取姿态提取
+    frame: left_arm_base
+    preferred_approach_base:
+      - -0.287197
+      - -0.957864
+      - 0.003832
+    offset_min_deg: -35
+    offset_max_deg: 35
+    candidate_step_deg: 5
+    max_green_tilt_deg: 20
+    policy: upright-cylinder
+    measured_object_axis: positive_y_green
+    control_up_axis: base_positive_z
+    gripper_up_axis: negative_x
+    gripper_approach_axis: positive_z

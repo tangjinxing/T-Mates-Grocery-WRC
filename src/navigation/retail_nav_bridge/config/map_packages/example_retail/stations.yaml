@@ -1,0 +1,104 @@
+# Retail service competition stations (approx 6m x 8m field, origin at start).
+# x/y/yaw：填 HMI「导航节点」坐标（s2_station_nav_mode:=pose 时 GoToStation 走 CreateTaskByPose）
+# vendor_target_id：仅在 s2_station_nav_mode:=id 且点类型为「站台节点」时使用
+map_name: retail_default
+stations:
+  start:
+    display_name: "起点"
+    x: -1.956
+    y: -0.030
+    yaw: 0.0
+    arrive_tol_m: 0.10
+    yaw_tol_rad: 0.20
+    max_speed: 0.5
+    vendor_target_id: 1
+
+  delivery_desk:
+    display_name: "交付台"   # 对应 HMI 导航点2 (0.243, -0.064)
+    x: 0.243
+    y: -0.064
+    yaw: 0.0
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_target_id: 2
+
+  shelf_group_a_front:
+    display_name: "货架组A正面"
+    x: 4.5
+    y: 2.0
+    yaw: 0.0
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_target_id: 3
+
+  shelf_group_b_front:
+    display_name: "货架组B正面"
+    x: 4.5
+    y: 5.0
+    yaw: 0.0
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_target_id: 4
+
+  restock_box:
+    display_name: "补货箱"
+    x: 1.5
+    y: 6.0
+    yaw: -1.57
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_target_id: 5
+
+  restock_desk:
+    display_name: "补货台"
+    x: 2.0
+    y: 6.5
+    yaw: 1.57
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.4
+    vendor_target_id: 6
+
+  judge_zone_1:
+    display_name: "环节1判定区"
+    x: 0.5
+    y: 3.5
+    yaw: 0.0
+    arrive_tol_m: 0.12
+    yaw_tol_rad: 0.25
+    max_speed: 0.5
+    vendor_target_id: 7
+
+  judge_zone_2:
+    display_name: "环节2判定区"
+    x: 0.5
+    y: 4.0
+    yaw: 0.0
+    arrive_tol_m: 0.12
+    yaw_tol_rad: 0.25
+    max_speed: 0.5
+    vendor_target_id: 8
+
+  judge_zone_3:
+    display_name: "环节3判定区"
+    x: 0.5
+    y: 4.5
+    yaw: 0.0
+    arrive_tol_m: 0.12
+    yaw_tol_rad: 0.25
+    max_speed: 0.5
+    vendor_target_id: 9
+
+  end:
+    display_name: "终点"
+    x: 0.0
+    y: 0.5
+    yaw: 3.14
+    arrive_tol_m: 0.12
+    yaw_tol_rad: 0.25
+    max_speed: 0.5
+    vendor_target_id: 10

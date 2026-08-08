@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "preset": "head",
+  "saved_at": "2026-08-05T20:51:54+08:00",
+  "head": {
+    "yaw": 526,
+    "pitch": 396
+  },
+  "lift_height": 0,
+  "units": {
+    "yaw_pitch": "servo_value",
+    "lift_height": "controller_unit"
+  },
+  "source": "actual_robot_state"
+}

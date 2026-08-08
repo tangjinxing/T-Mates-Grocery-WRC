@@ -1,0 +1,12 @@
+string output_dir
+string map_id
+string map_name
+string map_path
+bool copy_map_files
+string notes
+---
+uint32 error_code
+string error_msg
+string package_path
+uint32 station_count
+string nav_state

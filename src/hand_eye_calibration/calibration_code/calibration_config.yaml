@@ -1,0 +1,81 @@
+# 四组手眼标定的统一配置。所有长度单位均为米，角度单位为弧度。
+paths:
+  camera_api: /home/lh/robot_api/camera_api
+  arm_api: /home/lh/robot_api/arm_api_new
+  head_api: /home/lh/robot_api/head_api1
+  # 新整理目录中，数据集与calibration_code并列存放。
+  data_root: ../datasets
+
+charuco:
+  model: CC300-20-15
+  dictionary: DICT_5X5_100       # 板面标识/编码规格
+  squares_x: 14                   # OpenCV board X 方向方格数
+  squares_y: 9                    # OpenCV board Y 方向方格数
+  square_length: 0.020            # CC300-20-15：方格边长 20 mm
+  marker_length: 0.015            # CC300-20-15：marker 边长 15 mm
+  min_corners: 12                 # 单帧最低有效 ChArUco 角点数
+
+capture:
+  width: 1280
+  height: 720
+  fps: 30
+  warmup_frames: 60
+  image_extension: .png           # 无损保存角点图像
+
+calibration:
+  estimate_intrinsics: true       # 使用同一批 ChArUco 图像计算内参
+  hand_eye_method: TSAI
+  min_samples: 10
+
+# 头部可动的眼在手外标定。舵机值是原始读数（0-1000），不是角度。
+# 首次连接前必须按实机核对串口与安全范围。
+dynamic_eye_to_hand:
+  head_port: /dev/ttyUSB0
+  head_baudrate: 9600
+  safe_limits:
+    yaw: [350, 650]
+    pitch: [400, 500]
+  position_tolerance: 8
+  samples_per_node: 20
+  min_samples_per_node: 8
+  preview_jpeg_quality: 75
+  preview_width: 960
+  preview_fps: 15
+  quality:
+    min_brightness: 35
+    min_laplacian_variance: 60
+  # yaw 350..650、pitch 400..500内的覆盖节点；10节点 × 每节点20组 = 200组。
+  # Y575_P450已有数据，节点ID及目标值固定保留；实机确认pitch=600不可达。
+  nodes:
+    - {id: Y350_P400, yaw: 350, pitch: 400}
+    - {id: Y500_P400, yaw: 500, pitch: 400}
+    - {id: Y650_P400, yaw: 650, pitch: 400}
+    - {id: Y350_P500, yaw: 350, pitch: 500}
+    - {id: Y500_P500, yaw: 500, pitch: 500}
+    - {id: Y650_P500, yaw: 650, pitch: 500}
+    - {id: Y350_P450, yaw: 350, pitch: 450}
+    - {id: Y500_P450, yaw: 500, pitch: 450}
+    - {id: Y650_P450, yaw: 650, pitch: 450}
+    - {id: Y575_P450, yaw: 575, pitch: 450}
+
+profiles:
+  eye_in_hand_left:
+    mode: eye_in_hand
+    arm_side: left
+    arm_ip: 169.254.128.18
+    camera_serial: 215322079194
+  eye_in_hand_right:
+    mode: eye_in_hand
+    arm_side: right
+    arm_ip: 169.254.128.19
+    camera_serial: 335522072306
+  eye_to_hand_left:
+    mode: eye_to_hand
+    arm_side: left
+    arm_ip: 169.254.128.18
+    camera_serial: 344422070170
+  eye_to_hand_right:
+    mode: eye_to_hand
+    arm_side: right
+    arm_ip: 169.254.128.19
+    camera_serial: 344422070170

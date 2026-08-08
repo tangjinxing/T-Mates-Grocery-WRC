@@ -1,0 +1,10 @@
+string map_name
+---
+uint32 error_code
+string error_msg
+string map_id
+string map_name
+string result_code
+---
+float64 progress
+string nav_state

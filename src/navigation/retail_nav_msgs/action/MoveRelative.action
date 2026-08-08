@@ -1,0 +1,16 @@
+float64 dx
+float64 dy
+float64 dyaw
+string request_id
+float64 timeout_sec
+---
+uint32 error_code
+string error_msg
+string result_code
+float64 elapsed_sec
+float64 final_x
+float64 final_y
+float64 final_yaw
+---
+float64 progress
+string nav_state

@@ -1,0 +1,9 @@
+string station_id
+string display_name
+float64 x
+float64 y
+float64 yaw
+float64 arrive_tol_m
+float64 yaw_tol_rad
+float64 max_speed
+uint32 vendor_target_id

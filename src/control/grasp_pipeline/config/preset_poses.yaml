@@ -1,0 +1,264 @@
+schema_version: 1
+description: WRC抓取流程固定预设状态；不包含导航点和动态计算位姿
+conventions:
+  arm_pose_order:
+  - x
+  - y
+  - z
+  - rx
+  - ry
+  - rz
+  arm_position_unit: m
+  arm_orientation_unit: rad
+  arm_euler_order: xyz
+  head_unit: servo_value
+  null_behavior: 不控制该部件，禁止解释为零位
+  execution_rule: 只移动apply_components中的部件；参与执行的部件为null时禁止执行
+presets:
+  robot_initial_safe:
+    description: 机器人初始安全状态；待机器人到位后记录
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-08T10:51:24+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 800
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.078825
+      - -0.336597
+      - 0.000166
+      - -2.636
+      - 1.534
+      - 2.085
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  receipt_scan:
+    description: 小票识别状态；待机器人到位后记录
+    apply_components:
+    - torso
+    - head
+    status: pending
+    updated_at: null
+    source: null
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: null
+      unit: controller_unit
+    left_arm:
+      frame: left_arm_base
+      pose_6d: null
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  shelf_upper_photo_eye_to_hand_left:
+    description: 上层货架使用头部相机拍照，后续由左臂抓取
+    apply_components:
+    - torso
+    - head
+    status: ready
+    updated_at: '2026-08-06T17:45:21+08:00'
+    source: actual_robot_state
+    head:
+      yaw: 500
+      pitch: 446
+    torso:
+      height: 1348
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d: null
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  shelf_upper_photo_eye_in_hand_left:
+    description: 上层货架使用左手相机拍照，后续由左臂抓取
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-06T19:06:59+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 1348
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.401709
+      - -0.080899
+      - 0.009268
+      - -0.62
+      - 1.495
+      - -2.913
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  shelf_middle_photo_eye_in_hand_left:
+    description: 第二层货架使用左手相机拍照，后续由左臂抓取；等待现场记录
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-07T16:27:43+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 800
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.401713
+      - -0.080892
+      - 0.009255
+      - -0.62
+      - 1.495
+      - -2.913
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  table_place_pre_left:
+    description: 左臂桌面放置流程预放置姿态；保存最终放置躯干高度和左臂末端6D
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-07T10:59:43+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 400
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.195418
+      - -0.330886
+      - -0.11167
+      - 2.683
+      - 1.355
+      - -0.067
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  table_place_transition_left:
+    description: 左臂桌面放置中间过渡姿态；IK候选，必须低速实机验收
+    apply_components:
+    - left_arm
+    status: ready
+    updated_at: '2026-08-07T11:30:00+08:00'
+    source: ik_candidate_from_photo_and_place
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: null
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.236676
+      - -0.280889
+      - 0.032518
+      - 2.234875
+      - 1.558197
+      - -0.194868
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  table_place_final_left:
+    description: 左臂桌面最终放置位置；执行时只取xyz并保持拍照姿态角
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-07T11:30:00+08:00'
+    source: copied_from_table_place_pre_left
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 400
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.195418
+      - -0.330886
+      - -0.11167
+      - 2.683
+      - 1.355
+      - -0.067
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  shelf_middle_photo_front_eye_in_hand_left:
+    description: 第二层货架左手相机正面拍照，后续由左臂抓取
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-08T10:51:56+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 800
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.078801
+      - -0.336576
+      - 0.000154
+      - -2.637
+      - 1.534
+      - 2.084
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null
+  shelf_middle_nav2_photo_eye_in_hand_left:
+    description: 导航第二停靠点下的第二层左手相机正面拍照位；等待现场记录
+    apply_components:
+    - torso
+    - left_arm
+    status: ready
+    updated_at: '2026-08-08T11:56:35+08:00'
+    source: actual_robot_state
+    head:
+      yaw: null
+      pitch: null
+    torso:
+      height: 800
+      unit: mm
+    left_arm:
+      frame: left_arm_base
+      pose_6d:
+      - 0.46267
+      - 0.014673
+      - 0.045528
+      - 1.48
+      - 1.523
+      - -0.068
+    right_arm:
+      frame: right_arm_base
+      pose_6d: null

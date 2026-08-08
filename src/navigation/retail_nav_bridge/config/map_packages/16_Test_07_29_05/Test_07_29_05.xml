@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MapInfo>
+		<DoorInfo />
+		<LiftInfo />
+   <LineInfo>
+     <Line id="1">
+		<id>1</id>
+		<lineType>1</lineType>
+		<startNodeId>1</startNodeId>
+		<endNodeId>2</endNodeId>
+		<startAngle>6.267651876836837</startAngle>
+		<endAngle>6.267651876836837</endAngle>
+		<length>2.199</length>
+		<isAvoidDisabled>0</isAvoidDisabled>
+		<speed>max</speed>
+		<orient>17</orient>
+		<navType>1</navType>
+		<audioVoice>0</audioVoice>
+		<isDetour>0</isDetour>
+		<costCoefficient>1</costCoefficient>
+		<lineBuddyId>0</lineBuddyId>
+		<followType>1</followType>
+     </Line>
+     <Line id="2">
+		<id>2</id>
+		<lineType>1</lineType>
+		<startNodeId>2</startNodeId>
+		<endNodeId>3</endNodeId>
+		<startAngle>6.272887864592819</startAngle>
+		<endAngle>6.272887864592819</endAngle>
+		<length>3.314</length>
+		<isAvoidDisabled>0</isAvoidDisabled>
+		<speed>max</speed>
+		<orient>17</orient>
+		<navType>1</navType>
+		<audioVoice>0</audioVoice>
+		<isDetour>0</isDetour>
+		<costCoefficient>1</costCoefficient>
+		<lineBuddyId>0</lineBuddyId>
+		<followType>1</followType>
+     </Line>
+     <Line id="3">
+		<id>3</id>
+		<lineType>1</lineType>
+		<startNodeId>1</startNodeId>
+		<endNodeId>3</endNodeId>
+		<startAngle>6.270793469490426</startAngle>
+		<endAngle>6.270793469490426</endAngle>
+		<length>5.513</length>
+		<isAvoidDisabled>0</isAvoidDisabled>
+		<speed>max</speed>
+		<orient>17</orient>
+		<navType>1</navType>
+		<audioVoice>0</audioVoice>
+		<isDetour>0</isDetour>
+		<costCoefficient>1</costCoefficient>
+		<lineBuddyId>0</lineBuddyId>
+		<followType>1</followType>
+     </Line>
+     <Line id="4">
+		<id>4</id>
+		<lineType>1</lineType>
+		<startNodeId>4</startNodeId>
+		<endNodeId>5</endNodeId>
+		<startAngle>6.185446869067903</startAngle>
+		<endAngle>6.185446869067903</endAngle>
+		<length>2.357</length>
+		<isAvoidDisabled>0</isAvoidDisabled>
+		<speed>max</speed>
+		<orient>17</orient>
+		<navType>1</navType>
+		<audioVoice>0</audioVoice>
+		<isDetour>0</isDetour>
+		<costCoefficient>1</costCoefficient>
+		<lineBuddyId>0</lineBuddyId>
+		<followType>1</followType>
+     </Line>
+     <Line id="5">
+		<id>5</id>
+		<lineType>1</lineType>
+		<startNodeId>1</startNodeId>
+		<endNodeId>4</endNodeId>
+		<startAngle>0.05078908123303499</startAngle>
+		<endAngle>0.05078908123303499</endAngle>
+		<length>4.199</length>
+		<isAvoidDisabled>0</isAvoidDisabled>
+		<speed>max</speed>
+		<orient>17</orient>
+		<navType>1</navType>
+		<audioVoice>0</audioVoice>
+		<isDetour>0</isDetour>
+		<costCoefficient>1</costCoefficient>
+		<lineBuddyId>0</lineBuddyId>
+		<followType>1</followType>
+     </Line>
+   </LineInfo>
+   <NodeInfo>
+     <Node id="1">
+		<id>1</id>
+		<x>-1.956</x>
+		<y>-0.030</y>
+		<codeNum>1</codeNum>
+		<nodeName>导航点1</nodeName>
+		<nodeType>2</nodeType>
+		<theta>0</theta>
+		<conflictZoneType>0</conflictZoneType>
+		<maxParkingNum>1</maxParkingNum>
+		<labelOffsetX>10</labelOffsetX>
+		<labelOffsetY>25</labelOffsetY>
+     </Node>
+     <Node id="2">
+		<id>2</id>
+		<x>0.243</x>
+		<y>-0.064</y>
+		<codeNum>2</codeNum>
+		<nodeName>导航点2</nodeName>
+		<nodeType>2</nodeType>
+		<theta>0</theta>
+		<conflictZoneType>0</conflictZoneType>
+		<maxParkingNum>1</maxParkingNum>
+		<labelOffsetX>10</labelOffsetX>
+		<labelOffsetY>25</labelOffsetY>
+     </Node>
+     <Node id="3">
+		<id>3</id>
+		<x>3.557</x>
+		<y>-0.098</y>
+		<codeNum>3</codeNum>
+		<nodeName>导航点3</nodeName>
+		<nodeType>2</nodeType>
+		<theta>0</theta>
+		<conflictZoneType>0</conflictZoneType>
+		<maxParkingNum>1</maxParkingNum>
+		<labelOffsetX>10</labelOffsetX>
+		<labelOffsetY>25</labelOffsetY>
+     </Node>
+     <Node id="4">
+		<id>4</id>
+		<x>2.238</x>
+		<y>0.183</y>
+		<codeNum>4</codeNum>
+		<nodeName>站台点4</nodeName>
+		<nodeType>1</nodeType>
+		<theta>0</theta>
+		<conflictZoneType>0</conflictZoneType>
+		<maxParkingNum>1</maxParkingNum>
+		<labelOffsetX>1</labelOffsetX>
+		<labelOffsetY>1</labelOffsetY>
+     </Node>
+     <Node id="5">
+		<id>5</id>
+		<x>4.584</x>
+		<y>-0.047</y>
+		<codeNum>5</codeNum>
+		<nodeName>站台点5</nodeName>
+		<nodeType>1</nodeType>
+		<theta>0</theta>
+		<conflictZoneType>0</conflictZoneType>
+		<maxParkingNum>1</maxParkingNum>
+		<labelOffsetX>1</labelOffsetX>
+		<labelOffsetY>1</labelOffsetY>
+     </Node>
+   </NodeInfo>
+		<RegionInfo />
+		<ConnectionInfo />
+</MapInfo>

@@ -1,0 +1,16 @@
+string station_id
+string request_id
+float64 max_speed
+float64 timeout_sec
+---
+uint32 error_code
+string error_msg
+string result_code
+float64 elapsed_sec
+float64 final_x
+float64 final_y
+float64 final_yaw
+---
+float64 distance_remaining
+float64 progress
+string nav_state

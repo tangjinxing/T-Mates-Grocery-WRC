@@ -1,0 +1,6 @@
+string request_id
+string reason
+---
+uint32 error_code
+string error_msg
+string nav_state
