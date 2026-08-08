@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mode", choices=("eye_to_hand", "eye_in_hand"))
     parser.add_argument("--arm", choices=("left", "right"))
     parser.add_argument("--pose", nargs=6, type=float, metavar=("X", "Y", "Z", "RX", "RY", "RZ"))
-    parser.add_argument("--shelf-level", choices=("upper", "middle"), default="upper")
+    parser.add_argument("--shelf-level", choices=("1", "2", "3"), default="2")
     parser.add_argument("--preset", help="精确指定拍照预设，覆盖--shelf-level")
     parser.add_argument("--standoff", type=float, default=legacy.STANDOFF_M)
     parser.add_argument("--return-lift-mm", type=float, default=legacy.RETURN_LIFT_M * 1000.0)
@@ -190,17 +190,19 @@ def build_candidate(
     pregrasp_pose = legacy.make_pose_with_position(pregrasp_position, rotation)
     near_pose = legacy.make_pose_with_position(near_position, rotation)
     grasp_pose = legacy.make_pose_with_position(grasp_position, rotation)
+    # 6DOF实机验证表明，继续从near位置前伸最后10 mm会推动货物。
+    # 因此near位置现在就是实际夹取位置，后续安全回退也必须以它为起点。
     return_poses = legacy.make_return_poses(
-        grasp_position, rotation, approach, standoff, lift_height, photo_pose
+        near_position, rotation, approach,
+        standoff - legacy.FINAL_STOP_M, lift_height, photo_pose,
     )
 
     for label, position in (
         ("预抓取", pregrasp_position),
-        ("10mm停止点", near_position),
-        ("抓取点", grasp_position),
+        ("10mm夹取点", near_position),
     ):
         legacy.validate_position_target(f"{name}-{label}", position, errors)
-    legacy.validate_return_targets(return_poses, grasp_position, errors)
+    legacy.validate_return_targets(return_poses, near_position, errors)
 
     iks: dict[str, list[float]] = {}
     max_delta = math.inf
@@ -212,7 +214,6 @@ def build_candidate(
             sequence = [
                 ("pregrasp", pregrasp_pose),
                 ("near", near_pose),
-                ("grasp", grasp_pose),
                 ("lift", return_poses["lift"]),
                 ("retreat", return_poses["retreat"]),
                 ("lower", return_poses["lower"]),
@@ -455,22 +456,23 @@ def main() -> int:
         chosen = min(valid, key=lambda item: item.score)
         print(f"\n[SELECTED] {chosen.name}，评分={chosen.score:.2f}")
         print(f"预抓取6D: {chosen.pregrasp_pose}")
-        print(f"10mm停止点6D: {chosen.near_pose}")
-        print(f"抓取点6D: {chosen.grasp_pose}")
+        print(f"10mm夹取点6D: {chosen.near_pose}")
+        print(f"理论物体中心对应末端6D（不执行）: {chosen.grasp_pose}")
 
         if args.plan_only:
             print("[PLAN ONLY] 已完成只读解算，不会发送运动或夹爪命令。")
             return 0
-        if arm != "left":
-            print("[REJECTED] 当前夹爪执行阶段只允许已验证的左臂。")
+
+        # 左右臂均使用RealMan原生夹爪接口。真正运动前再次读取目标机械臂
+        # 的夹爪状态；未使能可由后续configure+release完成初始化，但已有
+        # 错误码时必须拒绝运动，不能依赖打开命令清除硬件故障。
+        gripper_state = client.get_gripper_state()
+        print(f"{arm}臂夹爪执行前状态: {gripper_state}")
+        if gripper_state.error != 0:
+            print(f"[REJECTED] {arm}臂夹爪错误码={gripper_state.error}，不会发送运动命令。")
             return 2
 
-        confirmation = input(
-            f"确认候选轴映射、空间和路径后，输入 MOVE {arm.upper()} 6D PREGRASP: "
-        ).strip()
-        if confirmation != f"MOVE {arm.upper()} 6D PREGRASP":
-            print("已取消，没有发送运动命令。")
-            return 0
+        print("[AUTO] 候选与安全检查已通过，自动打开夹爪并执行6DOF预抓取。")
         client.configure_gripper_range(0, 1000)
         client.gripper_release(speed=legacy.GRIPPER_SPEED, block=False, timeout=1)
         legacy.wait_gripper_open(client, minimum_position=990)
@@ -483,20 +485,8 @@ def main() -> int:
         if error > 0.015:
             raise RuntimeError(f"预抓取位置误差{error * 1000.0:.1f}mm超过15mm")
 
-        confirmation = input(f"输入 APPROACH {arm.upper()} 6D 10MM 执行直线接近: ").strip()
-        if confirmation != f"APPROACH {arm.upper()} 6D 10MM":
-            print("已停在预抓取点。")
-            return 0
-        legacy.execute_movel_monitored(client, chosen.near_pose)
-        confirmation = input(f"输入 FINAL 6D GRASP {arm.upper()} 完成最后10mm并夹取: ").strip()
-        if confirmation != f"FINAL 6D GRASP {arm.upper()}":
-            print("已停在抓取点前10mm。")
-            return 0
-        actual_grasp = legacy.execute_movel_monitored(
-            client, chosen.grasp_pose,
-            speed_percent=legacy.FINAL_APPROACH_SPEED_PERCENT,
-            timeout_s=legacy.FINAL_APPROACH_TIMEOUT_S,
-        )
+        print("[AUTO] 预抓取到位，自动执行直线接近并夹取。")
+        actual_grasp = legacy.execute_movel_monitored(client, chosen.near_pose)
         legacy.execute_gripper_pick_monitored(client)
 
         # 以实际抓取位姿重新生成并检查回退，避免计划值与实际值偏差。
@@ -505,7 +495,7 @@ def main() -> int:
         actual_approach = actual_rotation @ LOCAL_APPROACH_AXIS
         actual_returns = legacy.make_return_poses(
             np.asarray(actual_grasp[:3]), actual_rotation, actual_approach,
-            standoff, lift_height, photo_pose,
+            standoff - legacy.FINAL_STOP_M, lift_height, photo_pose,
         )
         return_errors: list[str] = []
         legacy.validate_return_targets(actual_returns, np.asarray(actual_grasp[:3]), return_errors)
@@ -523,8 +513,8 @@ def main() -> int:
             for error in return_errors:
                 print(f"  - {error}")
             return 3
-        confirmation = input(f"输入 RETURN {arm.upper()} 6D PHOTO 执行安全回退: ").strip()
-        if confirmation != f"RETURN {arm.upper()} 6D PHOTO":
+        confirmation = input("输入 y 执行安全回退至拍照位: ").strip().lower()
+        if confirmation != "y":
             print("已取消回退；机械臂保持抓取位置。")
             return 0
         legacy.execute_movel_monitored(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""左臂因时原生夹爪的独立力控夹取/释放测试；不会移动机械臂。"""
+"""左右臂因时原生夹爪的独立力控夹取/释放测试；不会移动机械臂。"""
 
 from __future__ import annotations
 
@@ -10,13 +10,17 @@ from pathlib import Path
 
 
 ARM_API_ROOT = Path("/home/lh/robot_api/arm_api_new")
-LEFT_ARM_IP = "169.254.128.18"
+ARM_IPS = {"left": "169.254.128.18", "right": "169.254.128.19"}
 POLL_S = 0.2
 ACTION_TIMEOUT_S = 15.0
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="左臂因时原生夹爪力控测试（不移动机械臂）")
+    parser = argparse.ArgumentParser(description="左右臂因时原生夹爪力控测试（不移动机械臂）")
+    parser.add_argument(
+        "--arm", choices=("left", "right"), default="left",
+        help="目标机械臂；默认left以兼容原有命令",
+    )
     parser.add_argument("--speed", type=int, default=100, help="闭合/打开速度，首次测试建议100")
     parser.add_argument("--force", type=int, default=80, help="力控阈值，塑料瓶首次建议80")
     parser.add_argument("--open-only", action="store_true", help="只打开夹爪，用于释放或恢复")
@@ -105,9 +109,10 @@ def main() -> int:
     sys.path.insert(0, str(ARM_API_ROOT))
     from realman_arm_api_api2 import RealmanArmClient
 
-    client = RealmanArmClient(ip=LEFT_ARM_IP, model="left", auto_connect=False)
+    arm_ip = ARM_IPS[args.arm]
+    client = RealmanArmClient(ip=arm_ip, model=args.arm, auto_connect=False)
     try:
-        print(f"连接左臂控制器: {LEFT_ARM_IP}")
+        print(f"连接{args.arm}臂控制器: {arm_ip}")
         client.connect()
         initial = client.get_gripper_state()
         require_healthy(initial)

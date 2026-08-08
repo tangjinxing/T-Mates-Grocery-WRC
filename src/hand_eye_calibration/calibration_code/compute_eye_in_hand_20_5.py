@@ -203,10 +203,25 @@ def evaluate(gripper_to_camera, base_to_target, items, matrix, distortion):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("profile", choices=["eye_in_hand_left", "eye_in_hand_right"])
+    parser.add_argument(
+        "profile",
+        choices=["eye_in_hand_left", "eye_in_hand_right", "eye_in_hand_right_v2", "eye_in_hand_right_v3"],
+    )
     parser.add_argument("--train", type=int, default=20)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--seed", type=int, default=20260805)
+    parser.add_argument(
+        "--method",
+        choices=["TSAI", "PARK", "HORAUD", "ANDREFF", "DANIILIDIS"],
+        help="覆盖calibration_config.yaml中的手眼算法；不同算法写入独立结果文件",
+    )
+    parser.add_argument(
+        "--exclude-indices",
+        nargs="*",
+        type=int,
+        default=[],
+        help="只在本次计算中排除指定样本索引；不会修改或删除原始数据",
+    )
     args = parser.parse_args()
     cfg = yaml.safe_load((ROOT / "calibration_config.yaml").read_text(encoding="utf-8"))
     profile = cfg["profiles"][args.profile]
@@ -215,6 +230,14 @@ def main():
     data_root = Path(cfg["paths"]["data_root"])
     scene = (data_root if data_root.is_absolute() else ROOT / data_root) / args.profile
     observations, image_size = load_observations(scene, cfg, args.profile)
+    excluded = sorted(set(int(value) for value in args.exclude_indices))
+    if excluded:
+        available = {int(item["index"]) for item in observations}
+        unknown = [index for index in excluded if index not in available]
+        if unknown:
+            raise ValueError(f"请求排除的样本索引不存在或原本已无效: {unknown}")
+        observations = [item for item in observations if int(item["index"]) not in excluded]
+        print(f"[INFO] 本次只读排除样本索引={excluded}；原始文件和samples.json保持不变")
     if len(observations) <= args.train:
         raise RuntimeError(f"独立有效样本只有{len(observations)}组，必须多于训练数量{args.train}")
     intrinsics_path, intrinsics, matrix, distortion = load_factory_intrinsics(scene, image_size)
@@ -222,7 +245,7 @@ def main():
     print(f"[INFO] profile={args.profile}，独立有效样本={len(observations)}，图像={image_size[0]}x{image_size[1]}")
     print(f"[INFO] 内参={intrinsics_path}，每轮={args.train}训练/{len(observations)-args.train}验证，重复{args.repeats}次")
 
-    method_name = str(cfg["calibration"]["hand_eye_method"]).upper()
+    method_name = str(args.method or cfg["calibration"]["hand_eye_method"]).upper()
     methods = {
         "TSAI": cv2.CALIB_HAND_EYE_TSAI, "PARK": cv2.CALIB_HAND_EYE_PARK,
         "HORAUD": cv2.CALIB_HAND_EYE_HORAUD, "ANDREFF": cv2.CALIB_HAND_EYE_ANDREFF,
@@ -263,11 +286,17 @@ def main():
         "hand_eye_method": method_name, "intrinsic_source": "realsense_factory",
         "intrinsics_file": str(intrinsics_path.relative_to(ROOT.parent)),
         "camera_matrix": matrix.tolist(), "distortion": distortion.reshape(-1).tolist(),
+        "excluded_indices": excluded,
         "valid_sample_count": len(observations), "best_repeat": best_index + 1,
         "best_gripper_T_camera": best["gripper_T_camera"],
         "best_validation": best["validation"], "runs": runs,
     }
-    result_path = scene / "results" / f"eye_in_hand_{args.train}_{len(observations)-args.train}_five_repeats.json"
+    method_suffix = "" if args.method is None else "_" + method_name.lower()
+    exclusion_suffix = "" if not excluded else "_exclude_" + "-".join(str(value) for value in excluded)
+    result_path = scene / "results" / (
+        f"eye_in_hand_{args.train}_{len(observations)-args.train}"
+        f"{method_suffix}{exclusion_suffix}_five_repeats.json"
+    )
     result_path.parent.mkdir(parents=True, exist_ok=True)
     result_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     print("\n========== 最优结果 ==========")

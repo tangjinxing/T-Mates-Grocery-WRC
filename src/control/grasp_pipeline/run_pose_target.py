@@ -26,19 +26,37 @@ HAND_EYE_ROOT = Path("/home/lh/WRC/src/hand_eye_calibration/datasets")
 ARM_API_ROOT = Path("/home/lh/robot_api/arm_api_new")
 POSE_ROOT = ROOT.parent / "initial_pose_console" / "config" / "poses"
 PRESET_PATH = ROOT / "config" / "preset_poses.yaml"
+HAND_EYE_RESULTS_PATH = ROOT / "config" / "hand_eye_results.yaml"
 
 ARM_IPS = {"left": "169.254.128.18", "right": "169.254.128.19"}
+
+
+def load_hand_eye_result_config() -> dict:
+    if not HAND_EYE_RESULTS_PATH.is_file():
+        raise FileNotFoundError(f"手眼标定结果配置不存在: {HAND_EYE_RESULTS_PATH}")
+    value = yaml.safe_load(HAND_EYE_RESULTS_PATH.read_text(encoding="utf-8")) or {}
+    for mode in ("eye_in_hand", "eye_to_hand"):
+        if not isinstance(value.get(mode), dict):
+            raise ValueError(f"手眼标定结果配置缺少{mode}: {HAND_EYE_RESULTS_PATH}")
+        for arm in ("left", "right"):
+            entry = value[mode].get(arm)
+            if not isinstance(entry, dict) or not entry.get("result_file"):
+                raise ValueError(f"手眼标定结果配置缺少{mode}.{arm}.result_file")
+    return value
+
+
+HAND_EYE_RESULT_CONFIG = load_hand_eye_result_config()
 DYNAMIC_RESULTS = {
-    "left": HAND_EYE_ROOT / "dynamic_eye_to_hand_left/results/dynamic_160_40_five_repeats.json",
-    "right": HAND_EYE_ROOT / "dynamic_eye_to_hand_right/results/dynamic_160_38_five_repeats.json",
+    arm: Path(HAND_EYE_RESULT_CONFIG["eye_to_hand"][arm]["result_file"]).expanduser()
+    for arm in ("left", "right")
 }
 EYE_IN_HAND_RESULTS = {
-    "left": HAND_EYE_ROOT / "eye_in_hand_left/results/eye_in_hand_20_5_five_repeats.json",
-    "right": HAND_EYE_ROOT / "eye_in_hand_right/results/eye_in_hand_20_5_five_repeats.json",
+    arm: Path(HAND_EYE_RESULT_CONFIG["eye_in_hand"][arm]["result_file"]).expanduser()
+    for arm in ("left", "right")
 }
 STANDOFF_M = 0.150
 SPEED_PERCENT = 10
-LINEAR_SPEED_PERCENT = 5
+LINEAR_SPEED_PERCENT = 10
 FINAL_APPROACH_SPEED_PERCENT = 4
 TCP_OFFSET_FLANGE_M = np.array([0.0, 0.0, 0.130])
 FINAL_STOP_M = 0.010
@@ -51,7 +69,7 @@ MOVEL_STABLE_SAMPLES = 3
 MOVEL_STALL_TIMEOUT_S = 4.0
 MOVEL_PROGRESS_M = 0.001
 FINAL_APPROACH_TIMEOUT_S = 15.0
-GRIPPER_FORCE = 200
+GRIPPER_FORCE = 250
 GRIPPER_CLOSE_TIMEOUT_S = 15.0
 RETURN_LIFT_M = 0.050
 RETURN_LIFT_AXIS_BASE = np.array([0.0, 0.0, 1.0])
@@ -75,9 +93,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--arm", choices=("left", "right"))
     parser.add_argument(
         "--shelf-level",
-        choices=("upper", "middle"),
-        default="upper",
-        help="货架层级；默认upper以保持原有行为",
+        choices=("1", "2", "3"),
+        default="2",
+        help="货架层级1/2/3；默认2",
     )
     parser.add_argument(
         "--preset",
@@ -102,7 +120,9 @@ def resolve_photo_preset_name(
 ) -> str:
     if override:
         return override
-    return f"shelf_{shelf_level}_photo_{mode}_{arm}"
+    if mode == "eye_in_hand":
+        return f"level_{shelf_level}_{arm}"
+    raise ValueError("眼在手外模式必须通过--preset明确指定预设")
 
 
 def read_pose_interactively(stream=None) -> list[float]:
@@ -221,7 +241,13 @@ def dynamic_base_to_camera(arm: str, yaw: float, pitch: float) -> tuple[np.ndarr
 
 def load_eye_in_hand(arm: str) -> tuple[np.ndarray, Path]:
     path = EYE_IN_HAND_RESULTS[arm]
-    transform = np.asarray(load_json(path)["best_gripper_T_camera"], dtype=float)
+    matrix_key = HAND_EYE_RESULT_CONFIG["eye_in_hand"][arm].get(
+        "matrix_key", "best_gripper_T_camera"
+    )
+    result = load_json(path)
+    if matrix_key not in result:
+        raise KeyError(f"标定结果{path}中不存在矩阵字段{matrix_key}")
+    transform = np.asarray(result[matrix_key], dtype=float)
     if transform.shape != (4, 4):
         raise ValueError("眼在手上矩阵不是4x4")
     return transform, path
@@ -580,13 +606,16 @@ def execute_gripper_pick_monitored(client):
             if stable_samples >= 5:
                 if last_state.actpos <= 50:
                     raise RuntimeError("夹爪接近完全闭合，未确认夹到物体")
-                if last_state.actpos >= 950:
-                    raise RuntimeError("夹爪仍接近全开位置，未完成夹取")
                 if last_state.mode != 6:
                     raise RuntimeError(
                         f"夹爪已停止但mode={last_state.mode}，"
                         "未确认为力控接触停止(mode=6)"
                     )
+                print(
+                    "夹爪已确认力控夹持: "
+                    f"actpos={last_state.actpos}, "
+                    f"force={last_state.current_force}, mode={last_state.mode}"
+                )
                 return last_state
             time.sleep(0.2)
 

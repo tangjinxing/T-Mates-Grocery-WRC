@@ -16,7 +16,8 @@ python app.py
 
 ## 统一预设保存
 
-页面可以选择 `robot_initial_safe`、`receipt_scan` 和已有货架拍照预设，也可以按命名规则创建新预设。分别使用：
+页面当前显示六个货架拍照预设：`level_1_left/right`、`level_2_left/right`、
+`level_3_left/right`，以及完整上半身小票识别预设 `receipt_recognition`。分别使用：
 
 ```text
 保存实际头部 yaw/pitch
@@ -50,7 +51,7 @@ python app.py
 ## 当前预设与常见问题
 
 - 当前统一预设文件是 `/home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml`。
-- 当前已验收的左臂眼在手上拍照预设为 `shelf_upper_photo_eye_in_hand_left`；左臂眼在手外拍照预设为 `shelf_upper_photo_eye_to_hand_left`。
+- 当前已验收的第二层眼在手上拍照预设为 `level_2_left` 和 `level_2_right`；第一层和第三层等待记录躯干高度。
 - 页面保存机械臂位姿时使用各自机械臂基座系，位置单位米、姿态单位 XYZ 欧拉角弧度；头部保存 yaw/pitch 舵机原始读数。
 - 页面无响应时先检查8010端口旧进程；连接硬件失败时确认对应相机/机械臂没有被其他网页或终端程序占用。
 - 访问地址中的 IP 不是固定世界地址，主机换网后用 `hostname -I` 获取当前局域网 IP，端口仍为8010。

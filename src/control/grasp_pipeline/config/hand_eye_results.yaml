@@ -1,0 +1,21 @@
+# 抓取流程使用的手眼标定结果入口。
+# 矩阵本体保留在标定程序生成的 JSON 中，避免 YAML 与 JSON 出现两个版本。
+eye_in_hand:
+  left:
+    dataset: eye_in_hand_left
+    method: TSAI
+    result_file: /home/lh/WRC/src/hand_eye_calibration/datasets/eye_in_hand_left/results/eye_in_hand_20_5_five_repeats.json
+    matrix_key: best_gripper_T_camera
+  right:
+    dataset: eye_in_hand_right_v3
+    method: DANIILIDIS
+    result_file: /home/lh/WRC/src/hand_eye_calibration/datasets/eye_in_hand_right_v3/results/eye_in_hand_20_5_daniilidis_five_repeats.json
+    matrix_key: best_gripper_T_camera
+
+eye_to_hand:
+  left:
+    dataset: dynamic_eye_to_hand_left
+    result_file: /home/lh/WRC/src/hand_eye_calibration/datasets/dynamic_eye_to_hand_left/results/dynamic_160_40_five_repeats.json
+  right:
+    dataset: dynamic_eye_to_hand_right
+    result_file: /home/lh/WRC/src/hand_eye_calibration/datasets/dynamic_eye_to_hand_right/results/dynamic_160_38_five_repeats.json

@@ -15,9 +15,9 @@
 
 - ChArUco CC300-20-15 检测、三路图像增强候选和亚像素细化。
 - 左/右动态眼在手外数据和动态模型计算；左臂 200 组、右臂独立有效 198 组。
-- 左臂眼在手上结果文件已生成；右臂眼在手上数据目录存在，但当前未找到可用结果 JSON。
+- 左臂眼在手上结果文件已生成；右臂使用 `eye_in_hand_right_v3` DANIILIDIS结果。
 - 统一预设 `config/preset_poses.yaml` 已接入 `acquire_sample.py` 和 `run_pose_target.py`。
-- 左臂眼在手上回拍照位现在读取 `shelf_upper_photo_eye_in_hand_left`，不再读取旧 `left_initial_photo_pose.json`。
+- 三层左右眼在手上拍照位统一读取 `level_1/2/3_left/right`，不再读取旧拍照位名称。
 - 因时原生夹爪已实机验证，当前可乐测试使用 `speed=100、force=200`。
 
 ### 未解决问题
@@ -262,7 +262,7 @@ conda activate hand_eye_calib
 cd "/home/lh/WRC/src/control/grasp_pipeline"
 ```
 
-拍照位姿来源为统一文件 `/home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml`。眼在手上左臂回拍照位使用预设 `shelf_upper_photo_eye_in_hand_left`；眼在手外左臂使用 `shelf_upper_photo_eye_to_hand_left`。旧 `initial_photo_pose.json` 只保留作历史核对，不作为当前回退目标。
+拍照位姿来源为统一文件 `/home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml`。当前只保留 `level_1/2/3_left/right` 六个货架拍照点；旧点位可从带时间戳备份恢复。旧 `initial_photo_pose.json` 只保留作历史核对。
 
 采集左臂眼在手上样本：
 

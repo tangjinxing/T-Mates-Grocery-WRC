@@ -27,7 +27,7 @@ LEFT_ARM_IP = "169.254.128.18"
 
 DEFAULT_TRANSITION_PRESET = "table_place_transition_left"
 DEFAULT_PLACE_PRESET = "table_place_final_left"
-DEFAULT_PHOTO_PRESET = "shelf_upper_photo_eye_in_hand_left"
+DEFAULT_PHOTO_PRESET = "level_2_left"
 
 MIN_LIFT_HEIGHT_MM = 100
 MAX_LIFT_HEIGHT_MM = 1350

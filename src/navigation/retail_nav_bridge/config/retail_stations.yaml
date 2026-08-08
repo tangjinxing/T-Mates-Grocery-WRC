@@ -1,25 +1,14 @@
-# 悟时地图 hj1：储位 0 / 1 / 2。
+# 悟时地图 hj1：储位 1 / 2 / 3。
 # vendor_mark 必须和悟时地图储位号 mark_no 完全一致。
-# hj1 当前储位共 3 个（SceneDataEasy，version=19）
+# 储位 3 的 station_id 使用小票货架码 H1_F_L5_C03，便于 HTTP 直接导航。
+# hj1 当前储位共 3 个（SceneDataEasy，version=29）
 map_name: hj1
 stations:
-  mark_0:
-    display_name: "储位0"
-    x: 3.080
-    y: 0.130
-    yaw: 0.460
-    arrive_tol_m: 0.08
-    yaw_tol_rad: 0.15
-    max_speed: 0.3
-    vendor_node_id: 0
-    vendor_target_id: 0
-    vendor_mark: "0"
-
   mark_1:
     display_name: "储位1"
-    x: 2.770
-    y: -0.000
-    yaw: 0.420
+    x: 2.950
+    y: -0.070
+    yaw: 0.460
     arrive_tol_m: 0.08
     yaw_tol_rad: 0.15
     max_speed: 0.3
@@ -29,12 +18,24 @@ stations:
 
   mark_2:
     display_name: "储位2"
-    x: 0.470
-    y: 1.520
-    yaw: 0.470
+    x: 0.390
+    y: 1.710
+    yaw: 0.450
     arrive_tol_m: 0.08
     yaw_tol_rad: 0.15
     max_speed: 0.3
     vendor_node_id: 0
     vendor_target_id: 0
     vendor_mark: "2"
+
+  H1_F_L5_C03:
+    display_name: "储位3(H1_F_L5_C03)"
+    x: 0.570
+    y: 1.190
+    yaw: 0.420
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.3
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "3"

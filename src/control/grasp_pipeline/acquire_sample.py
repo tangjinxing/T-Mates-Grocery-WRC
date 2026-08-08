@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 import sys
 import time
 from datetime import datetime
@@ -46,9 +47,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mode", required=True, choices=sorted(MODES))
     parser.add_argument(
         "--shelf-level",
-        choices=("upper", "middle"),
-        default="upper",
-        help="货架层级；默认upper以保持原有行为",
+        choices=("1", "2", "3"),
+        default="2",
+        help="货架层级1/2/3；默认2",
     )
     parser.add_argument(
         "--preset",
@@ -66,7 +67,10 @@ def parse_args() -> argparse.Namespace:
 def resolve_preset_name(mode: str, shelf_level: str, override: str | None) -> str:
     if override:
         return override
-    return f"shelf_{shelf_level}_photo_{mode}"
+    if mode.startswith("eye_in_hand_"):
+        arm = mode.removeprefix("eye_in_hand_")
+        return f"level_{shelf_level}_{arm}"
+    raise ValueError("眼在手外模式必须通过--preset明确指定预设")
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -187,6 +191,67 @@ def save_json(path: Path, data: dict[str, Any]) -> None:
         handle.write("\n")
 
 
+def validate_sample_directory(path: Path) -> None:
+    """发布前确认三项数据完整且彼此尺寸一致。"""
+    required = [path / "rgb.png", path / "depth.png", path / "camera.json"]
+    missing = [item.name for item in required if not item.is_file()]
+    if missing:
+        raise RuntimeError(f"临时样本缺少文件: {missing}")
+    rgb = cv2.imread(str(path / "rgb.png"), cv2.IMREAD_COLOR)
+    depth = cv2.imread(str(path / "depth.png"), cv2.IMREAD_UNCHANGED)
+    if rgb is None or depth is None:
+        raise RuntimeError("临时样本RGB或深度图无法重新读取")
+    if rgb.shape[:2] != depth.shape[:2] or depth.dtype != np.uint16:
+        raise RuntimeError(
+            f"临时样本图像不一致: RGB={rgb.shape}, depth={depth.shape}/{depth.dtype}"
+        )
+    value = json.loads((path / "camera.json").read_text(encoding="utf-8"))
+    if not isinstance(value.get("cam_K"), list) or len(value["cam_K"]) != 9:
+        raise RuntimeError("临时样本camera.json缺少长度为9的cam_K")
+    if float(value.get("depth_scale", 0.0)) <= 0.0:
+        raise RuntimeError("临时样本camera.json的depth_scale无效")
+
+
+def publish_latest_sample(mode_root: Path, temporary: Path) -> tuple[Path, Path]:
+    """将完整临时样本轮换为latest，并最多保留一组previous。"""
+    latest = mode_root / "latest_sample"
+    previous = mode_root / "previous_sample"
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    old_previous = mode_root / f".old_previous_{stamp}"
+
+    # 允许预先创建的空占位目录；任何含数据但不完整的目录都拒绝覆盖。
+    for target in (latest, previous):
+        if target.exists() and not any(target.iterdir()):
+            target.rmdir()
+        elif target.exists():
+            validate_sample_directory(target)
+
+    previous_stashed = False
+    latest_moved = False
+    new_published = False
+    try:
+        if previous.exists():
+            previous.rename(old_previous)
+            previous_stashed = True
+        if latest.exists():
+            latest.rename(previous)
+            latest_moved = True
+        temporary.rename(latest)
+        new_published = True
+    except Exception:
+        # 尽最大可能恢复操作前状态，避免一次失败同时丢失两代样本。
+        if new_published and latest.exists():
+            latest.rename(temporary)
+        if latest_moved and previous.exists():
+            previous.rename(latest)
+        if previous_stashed and old_previous.exists():
+            old_previous.rename(previous)
+        raise
+    if old_previous.exists():
+        shutil.rmtree(old_previous)
+    return latest, previous
+
+
 def main() -> int:
     args = parse_args()
     mode_config = MODES[args.mode]
@@ -203,6 +268,7 @@ def main() -> int:
 
     robot = move_to_preset(preset, applied, args.arm_speed, args.lift_speed)
     camera = None
+    temporary_sample_dir: Path | None = None
     try:
         sys.path.insert(0, str(CAMERA_API_ROOT))
         from D435_rgb_depth import D435Camera
@@ -236,8 +302,11 @@ def main() -> int:
             raise RuntimeError(f"深度图类型不是预期的 uint16: {depth.dtype}")
 
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        sample_dir = ROOT / "runs" / args.mode / stamp
-        sample_dir.mkdir(parents=True, exist_ok=False)
+        mode_root = ROOT / "runs" / args.mode
+        mode_root.mkdir(parents=True, exist_ok=True)
+        sample_dir = mode_root / f".tmp_sample_{stamp}"
+        sample_dir.mkdir(parents=False, exist_ok=False)
+        temporary_sample_dir = sample_dir
         rgb_path = sample_dir / "rgb.png"
         depth_path = sample_dir / "depth.png"
 
@@ -256,18 +325,33 @@ def main() -> int:
             ],
             # 网页采用BOP风格：depth_mm = depth_raw * depth_scale。
             "depth_scale": round(depth_scale_m * 1000.0, 6),
+            "mode": args.mode,
+            "preset": preset_name,
+            "camera_serial": serial,
+            "captured_at": datetime.now().astimezone().isoformat(timespec="milliseconds"),
+            "image_width": int(color.shape[1]),
+            "image_height": int(color.shape[0]),
         }
         save_json(sample_dir / "camera.json", camera_json)
+
+        validate_sample_directory(sample_dir)
+        latest_dir, previous_dir = publish_latest_sample(mode_root, sample_dir)
+        rgb_path = latest_dir / "rgb.png"
+        depth_path = latest_dir / "depth.png"
 
         print("\n采集成功:")
         print(f"  RGB:   {rgb_path}")
         print(f"  Depth: {depth_path} (uint16原始深度)")
-        print(f"  Camera:{sample_dir / 'camera.json'}")
+        print(f"  Camera:{latest_dir / 'camera.json'}")
+        print(f"  Latest: {latest_dir}")
+        print(f"  Previous: {previous_dir if previous_dir.exists() else '无（首次采集）'}")
         print(f"  depth_scale: {camera_json['depth_scale']} mm/unit")
         return 0
     finally:
         if camera is not None:
             camera.stop()
+        if temporary_sample_dir is not None and temporary_sample_dir.exists():
+            shutil.rmtree(temporary_sample_dir)
         robot.close()
 
 

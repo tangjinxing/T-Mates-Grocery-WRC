@@ -1,15 +1,12 @@
 # Agent target_id -> retail_stations.yaml station_id.
 # 商品货位格式：H<1|2>_<F|B>_L<1..5>_C<两位列号>。
-# levels 必须与商品摆放表中“该货架面 + 该层”的总列数一致。
-# 下列数据依据当前商品摆放表填写；摆放表变化时必须同步修改。
-# 分段按商品列中心就近选择；恰好位于两个分段点中间时选择较小编号。
 #
-# 当前 hj1 联调：HTTP 别名（见 retail_stations.yaml）。1→0 用 delivery_place。
+# 当前 hj1 联调：mark_1 / mark_2 / H1_F_L5_C03（储位 3）。
+# 小票返回 H1_F_L5_C03 时可直接作为 target_id（见 retail_stations.yaml）。
 
 aliases:
-  replenishment_pickup: mark_1   # 储位 1
-  delivery_place: mark_0         # 储位 0
-  # task_boundary: mark_2        # hj1 无此点
+  delivery_place: mark_1           # 储位 1
+  replenishment_pickup: mark_2     # 储位 2
 
 faces:
   H1_F:

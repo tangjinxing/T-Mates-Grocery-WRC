@@ -39,7 +39,7 @@ Python：3.10
 - 左臂动态眼在手外：200 组，160 训练/40 验证，结果在 `datasets/dynamic_eye_to_hand_left/results/dynamic_160_40_five_repeats.json`。
 - 右臂动态眼在手外：198 组独立有效样本，160 训练/38 验证，结果在 `datasets/dynamic_eye_to_hand_right/results/dynamic_160_38_five_repeats.json`。
 - 左臂眼在手上：结果在 `datasets/eye_in_hand_left/results/eye_in_hand_20_5_five_repeats.json`。
-- 右臂眼在手上：数据目录已建立，但当前未找到可用的 `results/*.json`，不能直接用于抓取。
+- 右臂眼在手上：使用 `eye_in_hand_right_v3` 的 DANIILIDIS 结果，可用于右臂实验性抓取。
 
 ### 控制与采集
 
@@ -48,7 +48,7 @@ Python：3.10
 - `grasp_pipeline/test_native_gripper.py`：只测试因时原生夹爪，不移动机械臂。
 - `initial_pose_console/app.py`：8010 整体预设姿态管理页面，管理头部、躯干、左臂和右臂字段。
 - 统一预设文件：`grasp_pipeline/config/preset_poses.yaml`。
-- 当前左臂眼在手上拍照预设：`shelf_upper_photo_eye_in_hand_left`，位姿来自统一 YAML，不再使用旧 JSON 拍照位姿。
+- 当前三层眼在手上拍照预设统一命名为 `level_1/2/3_left/right`；第二层左右位姿已验收。
 
 ## 3. 当前抓取流程
 
@@ -256,7 +256,7 @@ SSH 的 `DISPLAY` 为空时没有 GUI 显示能力。使用局域网网页、本
 
 ### 回到错误的拍照位
 
-检查终端打印的 `拍照预设` 和 `拍照位姿文件`。当前必须是统一 YAML 的对应节点，例如 `shelf_upper_photo_eye_in_hand_left`；不要使用旧 `initial_photo_pose.json`。
+检查终端打印的 `拍照预设` 和 `拍照位姿文件`。当前必须是统一 YAML 的对应节点，例如 `level_2_left`；不要使用旧 `initial_photo_pose.json`。
 
 ### 夹爪未打开或夹取失败
 

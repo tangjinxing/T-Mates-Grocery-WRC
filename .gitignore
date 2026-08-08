@@ -14,6 +14,12 @@ src/control/grasp_pipeline/runs/
 src/control/initial_pose_console/snapshots/
 src/control/initial_pose_console/logs/
 
+# 导航与小票本地运行产物
+src/navigation/run/
+src/parse_receipt/head_cam_*.jpg
+src/parse_receipt/*.jpg
+src/parse_receipt/*.png
+
 # 自动备份和临时文件
 src/control/grasp_pipeline/config/backups/
 *.bak

@@ -35,13 +35,14 @@ config/preset_poses.yaml
 当前预设：
 
 ```text
-robot_initial_safe                        # 机器人初始安全状态，待记录
-receipt_scan                              # 小票识别状态，待记录
-shelf_upper_photo_eye_to_hand_left         # 上层头部相机拍照状态
-shelf_upper_photo_eye_in_hand_left         # 上层左手相机拍照状态
-shelf_middle_nav2_photo_eye_in_hand_left   # 导航第二停靠点下的第二层正面拍照状态
-table_place_pre_left                        # 当前测试作为左臂最终桌面放置状态
+level_1_left / level_1_right   # 第一层，等待记录躯干高度
+level_2_left / level_2_right   # 第二层，已验收
+level_3_left / level_3_right   # 第三层，等待记录躯干高度
 ```
+
+旧的初始、小票、眼在手外和桌面放置预设已从当前YAML清理，但完整备份仍在
+`config/backups/preset_poses_before_level_cleanup_20260808_173722.yaml`。因此
+`place_object.py`在重新记录放置过渡点和终点之前不可执行。
 
 每个预设均包含 `head/torso/left_arm/right_arm`，并通过 `apply_components` 明确本动作要移动哪些部件。参与执行的字段为 `null` 时禁止执行；未参与字段为 `null` 时保持不动，绝不能解释为零位。页面状态含义：`pending` 为尚未设置或全部参与字段无数据，`incomplete` 为部分参与字段缺失，`ready` 为全部参与字段可用。使用8010页面可以分别读取四个部件并更新执行范围；每次更新都会备份旧YAML并原子写入。页面允许在100～1350 mm安全范围内控制躯干高度，速度限制为1～20%，该功能依赖左臂控制器连接。
 
@@ -104,7 +105,7 @@ python acquire_sample.py --mode eye_to_hand_left
 左臂眼在手上（左手相机）：
 
 ```bash
-python acquire_sample.py --mode eye_in_hand_left
+python acquire_sample.py --mode eye_in_hand_left --shelf-level 2
 ```
 
 脚本从统一 YAML 读取当前模式对应的拍照预设，只连接并移动其 `apply_components` 中的部件；未参与部件保持不动。脚本显示全部目标后，必须输入完整确认词 `MOVE <预设名>`，随后以默认机械臂速度5%、升降柱速度5%依次到位，再启动相机采集。参与执行的字段缺失、躯干高度不在100～1350 mm或目标预设不存在时会拒绝运行。每组新样本保存在：
@@ -161,10 +162,10 @@ cd "/home/lh/WRC/src/control/grasp_pipeline"
 python acquire_sample.py --mode eye_in_hand_left
 ```
 
-脚本读取统一预设 `shelf_upper_photo_eye_in_hand_left`。当前该预设只执行 `torso + left_arm`，头部和右臂保持不动。核对终端显示的目标后，现场输入：
+脚本读取统一预设 `level_2_left`。当前该预设只执行 `torso + left_arm`，头部和右臂保持不动。核对终端显示的目标后，现场输入：
 
 ```text
-MOVE shelf_upper_photo_eye_in_hand_left
+MOVE level_2_left
 ```
 
 脚本自动到达拍照位，然后使用左手D435保存：
@@ -460,13 +461,13 @@ cd /home/lh/WRC/src/control/initial_pose_console
 python app.py
 http://169.254.128.40:8010/
 
-夹爪打开：python test_native_gripper.py --open-only --speed 100
+左臂夹爪打开：python test_native_gripper.py --open-only --speed 100
 
-夹爪闭合：python test_native_gripper.py \
+左臂夹爪闭合：python test_native_gripper.py \
   --speed 100 \
   --force 200
 
-夹爪使能：
+左臂夹爪使能：
 conda activate hand_eye_calib
 cd "/home/lh/WRC/src/control/grasp_pipeline"
 
@@ -504,6 +505,51 @@ try:
 finally:
     client.disconnect()
 PY
+右臂夹爪使能：
+conda activate hand_eye_calib
+cd "/home/lh/WRC/src/control/grasp_pipeline"
+
+python - <<'PY'
+import sys
+import time
+
+sys.path.insert(0, "/home/lh/robot_api/arm_api_new")
+from realman_arm_api_api2 import RealmanArmClient
+
+client = RealmanArmClient(
+    ip="169.254.128.19",
+    model="right",
+    auto_connect=False,
+)
+
+try:
+    client.connect()
+
+    print("右臂连接成功")
+    print("配置右臂夹爪行程 0～1000……")
+    client.configure_gripper_range(0, 1000)
+    time.sleep(1)
+
+    print("发送右臂夹爪打开命令……")
+    client.gripper_release(speed=100, block=True, timeout=10)
+    time.sleep(1)
+
+    state = client.get_gripper_state()
+    print("右臂夹爪状态:", state)
+
+    if state.enable_state == 1 and state.status == 1 and state.error == 0:
+        print("右臂夹爪已成功使能并在线")
+    else:
+        print(
+            "右臂夹爪仍未使能，请检查工具端24V、"
+            "通信线及控制器夹爪配置"
+        )
+finally:
+    client.disconnect()
+PY
+
+右臂夹爪打开：
+python test_native_gripper.py   --arm right   --open-only   --speed 100
 
 种类抓取测试命令：
 
@@ -524,3 +570,64 @@ python run_pose_target.py \
   --shelf-level middle \
   --standoff 0.20 \
   --return-lift-mm 50
+
+
+
+新指令：
+右臂第一层：
+拍照：
+python acquire_sample.py   --mode eye_in_hand_right   --shelf-level 1
+抓取：
+python run_pose_target_6d.py \
+  --mode eye_in_hand \
+  --arm right \
+  --shelf-level 1 \
+  --preset level_1_right \
+  --up-axis-policy measured \
+  --standoff 0.20 \
+  --return-lift-mm 50
+
+
+右臂第二层：
+拍照：
+python acquire_sample.py   --mode eye_in_hand_right   --shelf-level 2
+抓取：
+python run_pose_target_6d.py \
+  --mode eye_in_hand \
+  --arm right \
+  --shelf-level 2 \
+  --preset level_2_right \
+  --up-axis-policy measured \
+  --standoff 0.20 \
+  --return-lift-mm 50
+
+左臂第一层：
+拍照：
+python acquire_sample.py   --mode eye_in_hand_left   --shelf-level 1
+抓取：
+python run_pose_target_6d.py \
+  --mode eye_in_hand \
+  --arm left \
+  --shelf-level 1 \
+  --preset level_1_left \
+  --up-axis-policy measured \
+  --standoff 0.20 \
+  --return-lift-mm 50
+
+左臂第二层：
+拍照：
+python acquire_sample.py   --mode eye_in_hand_left   --shelf-level 2
+抓取：
+python run_pose_target_6d.py \
+  --mode eye_in_hand \
+  --arm left \
+  --shelf-level 2 \
+  --preset level_2_left \
+  --up-axis-policy measured \
+  --standoff 0.20 \
+  --return-lift-mm 50
+
+
+
+夹爪松开：
+python test_native_gripper.py   --arm left   --open-only   --speed 100

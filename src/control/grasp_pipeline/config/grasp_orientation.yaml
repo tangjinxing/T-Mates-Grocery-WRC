@@ -2,8 +2,9 @@ schema_version: 1
 description: 货架抓取首选接近方向；方向均在对应机械臂基座系表达
 
 level_profiles:
-  upper: shelf_front_left
-  middle: shelf_front_left
+  '1': shelf_front_left
+  '2': shelf_front_left
+  '3': shelf_front_left
 
 profiles:
   shelf_front_left:

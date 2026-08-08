@@ -69,6 +69,16 @@ profiles:
     arm_side: right
     arm_ip: 169.254.128.19
     camera_serial: 335522072306
+  eye_in_hand_right_v2:
+    mode: eye_in_hand
+    arm_side: right
+    arm_ip: 169.254.128.19
+    camera_serial: 335522072306
+  eye_in_hand_right_v3:
+    mode: eye_in_hand
+    arm_side: right
+    arm_ip: 169.254.128.19
+    camera_serial: 335522072306
   eye_to_hand_left:
     mode: eye_to_hand
     arm_side: left
