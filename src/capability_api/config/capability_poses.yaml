@@ -1,0 +1,192 @@
+schema_version: 1
+description: WRC能力接口使用的完整上半身预设姿态；不包含导航坐标和动态计算位姿
+
+conventions:
+  arm_pose_order: [x, y, z, rx, ry, rz]
+  arm_position_unit: m
+  arm_orientation_unit: rad
+  arm_euler_order: xyz
+  torso_height_unit: mm
+  head_unit: servo_value
+  null_behavior: 不控制该部件，禁止解释为零位
+  execution_rule: 仅移动apply_components中的部件；参与部件数据缺失时拒绝执行
+  torso_merge_tolerance_mm: 2
+
+poses:
+  level_1:
+    description: 第一层左右手相机拍照与抓取准备姿态
+    status: ready
+    apply_components: [torso, left_arm, right_arm]
+    source:
+      file: /home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml
+      presets: [level_1_left, level_1_right]
+      torso_source_heights_mm: [1349, 1349]
+    torso:
+      height_mm: 1349
+    head:
+      yaw: null
+      pitch: null
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.462653, 0.01468, 0.045527, 1.48, 1.523, -0.067]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.462078, 0.031588, 0.045357, 1.531, 1.458, -0.059]
+
+  level_2:
+    description: 第二层左右手相机拍照与抓取准备姿态
+    status: ready
+    apply_components: [torso, left_arm, right_arm]
+    source:
+      file: /home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml
+      presets: [level_2_left, level_2_right]
+      torso_source_heights_mm: [800, 799]
+      torso_merge_note: 左右读数相差1mm，在2mm容差内，使用四舍五入平均值800mm
+    torso:
+      height_mm: 800
+    head:
+      yaw: null
+      pitch: null
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.46267, 0.014673, 0.045528, 1.48, 1.523, -0.068]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.462108, 0.031606, 0.045363, 1.53, 1.458, -0.061]
+
+  level_3:
+    description: 第三层左右手相机拍照与抓取准备姿态
+    status: ready
+    apply_components: [torso, left_arm, right_arm]
+    source:
+      file: /home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml
+      presets: [level_3_left, level_3_right]
+      torso_source_heights_mm: [220, 220]
+    torso:
+      height_mm: 220
+    head:
+      yaw: null
+      pitch: null
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.46267, 0.014673, 0.045528, 1.48, 1.523, -0.068]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.462108, 0.031606, 0.045363, 1.53, 1.458, -0.061]
+
+  level_4:
+    description: 第四层左右手相机拍照与抓取准备姿态；等待记录躯干高度
+    status: incomplete
+    apply_components: [torso, left_arm, right_arm]
+    source:
+      method: copied_arm_pose_from_level_2
+      arm_pose_source: [level_2_left, level_2_right]
+      torso_source_heights_mm: [null, null]
+    torso:
+      height_mm: null
+    head:
+      yaw: null
+      pitch: null
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.46267, 0.014673, 0.045528, 1.48, 1.523, -0.068]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.462108, 0.031606, 0.045363, 1.53, 1.458, -0.061]
+
+  RECEIPT_VIEW:
+    description: 小票拍摄时的完整上半身姿态；来自同一轮实机只读采集
+    status: ready
+    apply_components: [torso, head, left_arm, right_arm]
+    source:
+      method: actual_robot_state
+      synchronized_batch: true
+    torso:
+      height_mm: 400
+    head:
+      yaw: 533
+      pitch: 358
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.462635, 0.014669, 0.045536, 1.477, 1.523, -0.069]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.439813, -0.049465, -0.000683, 0.258, 1.551, -1.118]
+
+  DELIVERY_TABLE_PLACE_READY:
+    description: 交付台放置预备姿态；躯干降至400mm，左右臂保持当前level_1拍照姿态
+    status: ready
+    apply_components: [torso, left_arm, right_arm]
+    source:
+      file: /home/lh/WRC/src/control/grasp_pipeline/config/preset_poses.yaml
+      presets: [level_1_left, level_1_right]
+    torso:
+      height_mm: 400
+    head:
+      yaw: null
+      pitch: null
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.462653, 0.01468, 0.045527, 1.48, 1.523, -0.067]
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.462078, 0.031588, 0.045357, 1.531, 1.458, -0.059]
+
+  DELIVERY_TABLE_PLACE_TRANSITION_LEFT:
+    description: 左臂从交付台放置预备姿态前往最终放置姿态的关节中点过渡候选；完整正反向IK已通过，等待低速实机验证
+    status: candidate
+    apply_components: [left_arm]
+    source:
+      method: joint_midpoint_fk
+      interpolation_ratio: 0.5
+      path_validation: READY_TRANSITION_FINAL_TRANSITION_READY
+      max_segment_joint_delta_deg: 48.67
+      min_abs_j5_deg: 32.11
+    torso:
+      height_mm: 400
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.526816, -0.173481, -0.020822, 3.142873, 1.464476, 1.311905]
+
+  DELIVERY_TABLE_PLACE_TRANSITION_RIGHT:
+    description: 右臂从交付台放置预备姿态前往最终放置姿态的关节中点过渡候选；完整正反向IK已通过，等待低速实机验证
+    status: candidate
+    apply_components: [right_arm]
+    source:
+      method: mirrored_left_joint_solution_then_joint_midpoint_fk
+      interpolation_ratio: 0.5
+      path_validation: READY_TRANSITION_FINAL_TRANSITION_READY
+      max_segment_joint_delta_deg: 48.61
+      min_abs_j5_deg: 32.11
+    torso:
+      height_mm: 400
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.53097, -0.157165, -0.019027, 2.110509, 1.363143, 0.792509]
+
+  DELIVERY_TABLE_PLACE_FINAL_LEFT:
+    description: 左臂最终松开物品的位置；400mm躯干高度下的当前实机完整6D候选
+    status: candidate
+    apply_components: [left_arm]
+    source:
+      method: actual_robot_state
+      validation: transition_full_chain_ik_passed
+    torso:
+      height_mm: 400
+    left_arm:
+      frame: left_arm_base
+      pose_6d: [0.413391, -0.397654, -0.062713, 2.72, 1.403, 0.601]
+
+  DELIVERY_TABLE_PLACE_FINAL_RIGHT:
+    description: 右臂最终松开物品的位置；由已验证左臂FINAL关节解按J1至J5取反、J6保持等价角映射并经右臂正运动学得到
+    status: candidate
+    apply_components: [right_arm]
+    source:
+      method: mirrored_left_joint_solution_fk
+      symmetry: J1_to_J5_negated_J6_equivalent
+      validation: transition_full_chain_ik_passed
+    torso:
+      height_mm: 400
+    right_arm:
+      frame: right_arm_base
+      pose_6d: [-0.422173, -0.383099, -0.060092, 2.450999, 1.371804, 1.413296]

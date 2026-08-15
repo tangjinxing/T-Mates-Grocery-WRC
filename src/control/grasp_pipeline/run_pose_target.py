@@ -554,15 +554,19 @@ def execute_movej_p_monitored(
         raise
 
 
-def execute_gripper_pick_monitored(client):
+def execute_gripper_pick_monitored(
+    client,
+    speed: int = GRIPPER_SPEED,
+    force: int = GRIPPER_FORCE,
+):
     """持续力控闭合夹爪，并以mode=6和稳定开度确认接触夹持。"""
     initial_state = client.get_gripper_state()
     initial_position = initial_state.actpos
     command_sent = False
     try:
         client.gripper_pick_keep(
-            speed=GRIPPER_SPEED,
-            force=GRIPPER_FORCE,
+            speed=speed,
+            force=force,
             block=False,
             timeout=1,
         )

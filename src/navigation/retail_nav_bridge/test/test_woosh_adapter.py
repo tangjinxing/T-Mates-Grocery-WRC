@@ -32,6 +32,7 @@ def _bare_adapter() -> WooshNavAdapter:
     adapter._goal_handle = None
     adapter._result_future = None
     adapter._mark_no = ""
+    adapter._speed_applied = True
     return adapter
 
 

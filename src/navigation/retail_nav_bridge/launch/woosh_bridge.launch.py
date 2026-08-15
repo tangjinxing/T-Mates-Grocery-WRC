@@ -54,6 +54,7 @@ def generate_launch_description() -> LaunchDescription:
                         "target_mapping_file": LaunchConfiguration(
                             "target_mapping_file"
                         ),
+                        "default_max_speed": 0.15,
                     }
                 ],
             ),

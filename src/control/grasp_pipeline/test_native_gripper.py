@@ -86,13 +86,14 @@ def wait_force_grip(client, initial_position: int, timeout: float = ACTION_TIMEO
         if stable_samples >= 5:
             if last.actpos <= 50:
                 raise RuntimeError("夹爪接近完全闭合，可能没有夹到物品")
-            if last.actpos >= 950:
-                raise RuntimeError("夹爪仍接近全开，未确认夹取")
             if last.mode != 6:
                 raise RuntimeError(
                     f"夹爪已停止但mode={last.mode}，"
                     "未确认为力控接触停止(mode=6)"
                 )
+            # 大尺寸物品可能在actpos接近全开时就发生接触。是否夹持成功
+            # 主要由“已发生闭合运动 + mode=6力控接触停止 + 连续稳定”判断，
+            # 不再使用actpos>=950作为失败条件。
             return last
         time.sleep(POLL_S)
     raise TimeoutError(f"力控闭合超过{timeout:.0f}s未稳定，最后状态={last}")

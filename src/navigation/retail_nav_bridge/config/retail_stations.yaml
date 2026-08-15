@@ -1,41 +1,113 @@
-# 悟时地图 hj1：储位 1 / 2 / 3。
+# 悟时地图 hotel1（SceneDataEasy version=26）。
 # vendor_mark 必须和悟时地图储位号 mark_no 完全一致。
-# 储位 3 的 station_id 使用小票货架码 H1_F_L5_C03，便于 HTTP 直接导航。
-# hj1 当前储位共 3 个（SceneDataEasy，version=29）
-map_name: hj1
+# 0 小票位 / 1 交付台 / 5 左手抓取 / 4 右手抓取 / 6 正面后退点
+# 2 另一面左手 / 3 另一面右手 / 7 反面后退点 / 8 初始点
+map_name: hotel1
 stations:
-  mark_1:
-    display_name: "储位1"
-    x: 2.950
-    y: -0.070
-    yaw: 0.460
+  mark_0:
+    display_name: "小票位"
+    x: 1.220
+    y: 0.030
+    yaw: 1.760
     arrive_tol_m: 0.08
     yaw_tol_rad: 0.15
-    max_speed: 0.3
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "0"
+
+  mark_1:
+    display_name: "交付台"
+    x: 1.330
+    y: 0.010
+    yaw: 1.760
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
     vendor_node_id: 0
     vendor_target_id: 0
     vendor_mark: "1"
 
   mark_2:
-    display_name: "储位2"
-    x: 0.390
-    y: 1.710
-    yaw: 0.450
+    display_name: "货架另一面左手"
+    x: 2.210
+    y: -1.720
+    yaw: -2.960
     arrive_tol_m: 0.08
     yaw_tol_rad: 0.15
-    max_speed: 0.3
+    max_speed: 0.15
     vendor_node_id: 0
     vendor_target_id: 0
     vendor_mark: "2"
 
-  H1_F_L5_C03:
-    display_name: "储位3(H1_F_L5_C03)"
-    x: 0.570
-    y: 1.190
-    yaw: 0.420
+  mark_3:
+    display_name: "货架另一面右手"
+    x: 2.220
+    y: -2.240
+    yaw: -3.010
     arrive_tol_m: 0.08
     yaw_tol_rad: 0.15
-    max_speed: 0.3
+    max_speed: 0.15
     vendor_node_id: 0
     vendor_target_id: 0
     vendor_mark: "3"
+
+  mark_4:
+    display_name: "右手抓取点"
+    x: 2.050
+    y: -1.420
+    yaw: -2.890
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "4"
+
+  mark_5:
+    display_name: "左手抓取点"
+    x: 1.980
+    y: -0.900
+    yaw: -2.910
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "5"
+
+  mark_6:
+    display_name: "正面后退点"
+    x: 2.57664561
+    y: -0.950151503
+    yaw: -2.95272708
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "6"
+
+  mark_7:
+    display_name: "反面后退点"
+    x: 2.590
+    y: -1.650
+    yaw: -2.920
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "7"
+
+  mark_8:
+    display_name: "初始点"
+    x: 3.270
+    y: 0.720
+    yaw: -2.980
+    arrive_tol_m: 0.08
+    yaw_tol_rad: 0.15
+    max_speed: 0.15
+    vendor_node_id: 0
+    vendor_target_id: 0
+    vendor_mark: "8"

@@ -1,0 +1,23 @@
+version: 1
+
+# 默认在机器人主机上运行 plan.py。
+active_profile: robot_current_network
+
+profiles:
+  # plan.py 运行在机器人 192.168.3.176 上。
+  robot_current_network:
+    perception_url: http://192.168.3.211:8083
+    sku_url: http://192.168.3.211:25540
+    navigation_url: http://127.0.0.1:8081
+    rgbd_url: http://127.0.0.1:8085
+    pose_url: http://127.0.0.1:8099
+    pick_pose_url: http://192.168.3.211:18084
+
+  # plan.py 上传并运行在 4090 服务器 192.168.3.211 上。
+  server_4090_current_network:
+    perception_url: http://127.0.0.1:8083
+    sku_url: http://127.0.0.1:25540
+    navigation_url: http://192.168.3.176:8081
+    rgbd_url: http://192.168.3.176:8085
+    pose_url: http://192.168.3.176:8099
+    pick_pose_url: http://127.0.0.1:18084

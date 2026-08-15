@@ -4,7 +4,7 @@ retail_nav_bridge:
     adapter: woosh
     status_hz: 10.0
     pose_hz: 20.0
-    default_max_speed: 0.5
+    default_max_speed: 0.15
     default_timeout_sec: 120.0
     woosh_service_timeout_sec: 30.0
     woosh_task_type: 1

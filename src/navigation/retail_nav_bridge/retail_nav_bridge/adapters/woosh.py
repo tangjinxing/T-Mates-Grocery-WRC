@@ -26,7 +26,7 @@ from woosh_robot_msgs.msg import (
     Scene,
     State as RobotStateValue,
 )
-from woosh_robot_msgs.srv import InitRobot, SwitchMap, Twist
+from woosh_robot_msgs.srv import ChangeNavMode, InitRobot, SwitchMap, Twist
 from woosh_task_msgs.msg import State as TaskState
 
 from retail_nav_bridge.adapters.base import (
@@ -91,6 +91,7 @@ class WooshNavAdapter:
         self._goal_handle = None
         self._result_future = None
         self._last_task_id = 0
+        self._speed_applied = False
 
         self._lock = threading.RLock()
         self._cb_group = ReentrantCallbackGroup()
@@ -128,6 +129,11 @@ class WooshNavAdapter:
         self._cli_switch_map = node.create_client(
             SwitchMap, "woosh_robot/robot/SwitchMap", callback_group=self._cb_group
         )
+        self._cli_change_nav_mode = node.create_client(
+            ChangeNavMode,
+            "woosh_robot/robot/ChangeNavMode",
+            callback_group=self._cb_group,
+        )
         self._act_exec_task = ActionClient(
             node, ExecTask, exec_task_action, callback_group=self._cb_group
         )
@@ -144,6 +150,47 @@ class WooshNavAdapter:
         if result is None:
             raise RuntimeError(f"{label} returned no result")
         return result
+
+    def _apply_nav_speed(self, max_speed: float) -> None:
+        """Set Woosh point-to-point max linear speed via ChangeNavMode."""
+        speed = float(max_speed)
+        if speed <= 0.0:
+            self._speed_applied = True
+            return
+        req = ChangeNavMode.Request()
+        req.arg.nav_mode.type.value = 2  # ArrType.K_ACCURATE
+        req.arg.nav_mode.mode.value = 1  # Mode.K_AVOID
+        req.arg.nav_mode.max_speed = speed
+        req.arg.has_field = req.arg.NAV_MODE_FIELD_SET
+        resp = self._call_service(
+            self._cli_change_nav_mode,
+            req,
+            label="woosh_robot/robot/ChangeNavMode",
+        )
+        if not getattr(resp, "ok", False):
+            raise RuntimeError(
+                getattr(resp, "msg", "") or "ChangeNavMode failed"
+            )
+        self._speed_applied = True
+        self._log.info(f"ChangeNavMode max_speed={speed:.3f} m/s")
+
+    def _try_apply_nav_speed(self, max_speed: float) -> None:
+        """ChangeNavMode only works after ExecTask is already navigating."""
+        if self._speed_applied:
+            return
+        now = time.monotonic()
+        last = getattr(self, "_speed_try_at", 0.0)
+        if now - last < 0.4:
+            return
+        self._speed_try_at = now
+        try:
+            self._apply_nav_speed(max_speed)
+        except Exception as exc:  # noqa: BLE001
+            if now - self._nav_started_at > 5.0:
+                self._speed_applied = True
+                self._log.warn(f"ChangeNavMode gave up: {exc}")
+            else:
+                self._log.warn(f"ChangeNavMode not applied yet: {exc}")
 
     def _on_pose_speed(self, msg: PoseSpeed) -> None:
         with self._lock:
@@ -220,6 +267,8 @@ class WooshNavAdapter:
         self._goal_handle = None
         self._result_future = None
         self._paused = False
+        self._speed_applied = False
+        self._speed_try_at = 0.0
 
     def _on_action_feedback(self, _feedback_msg: Any) -> None:
         with self._lock:
@@ -471,6 +520,7 @@ class WooshNavAdapter:
         self._goal_handle = handle
         self._result_future = handle.get_result_async()
         self._log.info(f"ExecTask accepted mark_no='{mark_no}' task_id={task_id}")
+        self._try_apply_nav_speed(goal.max_speed)
         return AdapterResult(session_id=str(task_id))
 
     def tick_nav(self, dt: float = 0.1) -> AdapterResult:
@@ -485,6 +535,7 @@ class WooshNavAdapter:
             )
 
         goal = self._goal
+        self._try_apply_nav_speed(goal.max_speed)
         elapsed = time.monotonic() - self._nav_started_at
         if goal.timeout_sec > 0 and elapsed > goal.timeout_sec:
             self.cancel_nav("navigation timeout")

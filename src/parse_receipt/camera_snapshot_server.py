@@ -219,31 +219,56 @@ app = FastAPI(title="camera-http-bridge", version="0.2.0")
 def index(camera: str = Query("head")) -> str:
     if camera not in CAMERA_SERIALS:
         camera = "head"
+    labels = {"head": "头部", "left": "左臂", "right": "右臂"}
+    label = labels.get(camera, camera)
+    switch_links = " · ".join(
+        f'<a href="/?camera={name}">{labels.get(name, name)}</a>'
+        for name in ("head", "left", "right")
+    )
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>头部相机实时预览</title>
+  <title>{label}相机实时预览</title>
   <style>
     body {{ margin:0; font-family:sans-serif; background:#111; color:#eee; }}
     header {{ padding:12px 16px; background:#1c1c1c; }}
     main {{ padding:12px; }}
     img {{ max-width:100%; background:#000; border:1px solid #333; }}
     a {{ color:#8cf; }}
+    #err {{ display:none; margin-top:12px; color:#f88; white-space:pre-wrap; }}
   </style>
 </head>
 <body>
   <header>
-    <strong>相机实时预览</strong>
+    <strong>{label}相机实时预览</strong>
     （{camera}）
+    · {switch_links}
     · <a href="/camera/video?camera={camera}">原始视频流</a>
     · <a href="/camera/snapshot?camera={camera}&type=color">拍一张</a>
     · <a href="/health">health</a>
   </header>
   <main>
-    <img src="/camera/video?camera={camera}" alt="live camera"/>
+    <img id="live" src="/camera/video?camera={camera}" alt="live camera"/>
+    <p id="err"></p>
   </main>
+  <script>
+    const img = document.getElementById('live');
+    const err = document.getElementById('err');
+    img.addEventListener('error', async () => {{
+      err.style.display = 'block';
+      try {{
+        const r = await fetch('/camera/snapshot?camera={camera}&type=color');
+        const t = await r.text();
+        err.textContent = '视频流失败 HTTP ' + r.status + ': ' + t
+          + '\\n提示: 同时只能开一路相机；请关掉其它预览标签页后再刷新。';
+      }} catch (e) {{
+        err.textContent = '视频流失败: ' + e
+          + '\\n提示: 同时只能开一路相机；请关掉其它预览标签页后再刷新。';
+      }}
+    }});
+  </script>
 </body>
 </html>
 """
@@ -275,6 +300,12 @@ def camera_snapshot(
 def camera_video(camera: str = Query("head")) -> StreamingResponse:
     # Validate before starting the generator so clients get a proper HTTP error.
     _resolve_camera(camera, "color")
+    # Only one stream/snapshot at a time (shared RealSense / USB + process lock).
+    if _CAPTURE_LOCK.locked():
+        raise HTTPException(
+            status_code=503,
+            detail="camera busy; close other preview/snapshot first",
+        )
     return StreamingResponse(
         mjpeg_stream(camera),
         media_type="multipart/x-mixed-replace; boundary=frame",

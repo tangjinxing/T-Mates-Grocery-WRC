@@ -22,6 +22,7 @@ class TargetResolutionError(ValueError):
 class FaceMapping:
     level_column_counts: Mapping[str, int]
     station_ids: tuple[str, str, str, str]
+    left_max_column: int | None = None
 
 
 class TargetResolver:
@@ -64,6 +65,13 @@ class TargetResolver:
             ]
             if unknown:
                 raise ValueError(f"{face_id} contains unknown stations: {unknown}")
+            if (
+                mapping.left_max_column is not None
+                and mapping.left_max_column < 1
+            ):
+                raise ValueError(
+                    f"{face_id}.left_max_column must be >= 1"
+                )
 
     def resolve(self, target_id: str) -> str:
         target_id = str(target_id or "").strip()
@@ -92,6 +100,11 @@ class TargetResolver:
             raise TargetResolutionError(
                 f"{target_id} column is outside 1..{column_count}"
             )
+
+        if mapping.left_max_column is not None:
+            if column <= mapping.left_max_column:
+                return mapping.station_ids[0]
+            return mapping.station_ids[-1]
 
         # Compare product-column centers with the four equal-segment centers.
         # Exact boundary ties select the lower-numbered segment.
@@ -145,12 +158,15 @@ def load_target_resolver(
         raw_levels = raw.get("levels") or {}
         if not isinstance(raw_levels, dict):
             raise ValueError(f"{face_id}.levels must be a mapping")
+        raw_left_max = raw.get("left_max_column")
+        left_max_column = None if raw_left_max is None else int(raw_left_max)
         faces[str(face_id)] = FaceMapping(
             level_column_counts={
                 str(level_id): int(column_count)
                 for level_id, column_count in raw_levels.items()
             },
             station_ids=mapped_ids,
+            left_max_column=left_max_column,
         )
 
     return TargetResolver(

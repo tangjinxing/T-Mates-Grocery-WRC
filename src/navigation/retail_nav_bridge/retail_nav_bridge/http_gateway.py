@@ -138,7 +138,7 @@ class NavigationHttpGateway(Node):
         self.declare_parameter("action_server_timeout_sec", 5.0)
         self.declare_parameter("health_status_stale_sec", 3.0)
         self.declare_parameter("health_poll_sec", 1.0)
-        self.declare_parameter("default_max_speed", 0.3)
+        self.declare_parameter("default_max_speed", 0.15)
         self.declare_parameter(
             "stations_file", _default_config_path("retail_stations.yaml")
         )

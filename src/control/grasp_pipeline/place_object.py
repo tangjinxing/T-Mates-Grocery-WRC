@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""左臂固定点放置测试：下降躯干、MoveJ_P放置、松爪、收臂、恢复躯干。
+"""左右臂固定点放置测试。
 
-该脚本不计算抓取位姿。它只读取统一 preset_poses.yaml 中已经人工验收的
-左臂眼在手上拍照姿态和桌面放置姿态。每个运动阶段发送指令前都会重新读取
-实际状态并完成范围、距离、机械臂错误、逆解和关节变化检查。
+从 capability_poses.yaml 读取 DELIVERY_TABLE_PLACE_READY、对应机械臂的
+TRANSITION 与 FINAL，执行 READY -> TRANSITION -> FINAL -> 松爪 ->
+TRANSITION -> READY。脚本不移动躯干；启动前要求躯干已经位于放置高度，
+目标机械臂位于 READY 且夹爪正在夹持物品。
 """
 
 from __future__ import annotations
@@ -21,13 +22,12 @@ from scipy.spatial.transform import Rotation
 
 
 ROOT = Path(__file__).resolve().parent
-PRESET_PATH = ROOT / "config" / "preset_poses.yaml"
+CAPABILITY_POSE_PATH = Path("/home/lh/WRC/src/capability_api/config/capability_poses.yaml")
 ARM_API_ROOT = Path("/home/lh/robot_api/arm_api_new")
-LEFT_ARM_IP = "169.254.128.18"
-
-DEFAULT_TRANSITION_PRESET = "table_place_transition_left"
-DEFAULT_PLACE_PRESET = "table_place_final_left"
-DEFAULT_PHOTO_PRESET = "level_2_left"
+ARM_CONFIG = {
+    "left": {"ip": "169.254.128.18", "pose_key": "left_arm"},
+    "right": {"ip": "169.254.128.19", "pose_key": "right_arm"},
+}
 
 MIN_LIFT_HEIGHT_MM = 100
 MAX_LIFT_HEIGHT_MM = 1350
@@ -48,10 +48,9 @@ STABLE_SAMPLES = 3
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="左臂固定点放置与安全回位测试")
-    parser.add_argument("--transition-preset", default=DEFAULT_TRANSITION_PRESET)
-    parser.add_argument("--place-preset", default=DEFAULT_PLACE_PRESET)
-    parser.add_argument("--photo-preset", default=DEFAULT_PHOTO_PRESET)
+    parser = argparse.ArgumentParser(description="左右臂固定点放置与安全回位测试")
+    parser.add_argument("--arm", choices=("left", "right"), required=True)
+    parser.add_argument("--plan-only", action="store_true", help="只做状态和完整路径逆解检查，不发送运动或夹爪命令")
     parser.add_argument("--arm-speed", type=float, default=5.0, help="MoveJ_P速度百分比，1～10")
     parser.add_argument("--lift-speed", type=int, default=10, help="升降柱速度百分比，1～20")
     parser.add_argument("--arm-timeout", type=float, default=60.0)
@@ -59,13 +58,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_presets() -> dict[str, Any]:
-    if not PRESET_PATH.is_file():
-        raise FileNotFoundError(f"统一预设文件不存在: {PRESET_PATH}")
-    data = yaml.safe_load(PRESET_PATH.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or not isinstance(data.get("presets"), dict):
-        raise ValueError(f"统一预设文件结构异常: {PRESET_PATH}")
-    return data["presets"]
+def load_capability_poses() -> dict[str, Any]:
+    if not CAPABILITY_POSE_PATH.is_file():
+        raise FileNotFoundError(f"能力位姿文件不存在: {CAPABILITY_POSE_PATH}")
+    data = yaml.safe_load(CAPABILITY_POSE_PATH.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("poses"), dict):
+        raise ValueError(f"能力位姿文件结构异常: {CAPABILITY_POSE_PATH}")
+    return data["poses"]
 
 
 def finite_pose(value: Any, label: str) -> list[float]:
@@ -77,54 +76,32 @@ def finite_pose(value: Any, label: str) -> list[float]:
     return pose
 
 
-def load_targets(
-    transition_name: str,
-    place_name: str,
-    photo_name: str,
-) -> tuple[list[float], list[float], int, list[float], int]:
-    presets = load_presets()
-    if transition_name not in presets:
-        raise ValueError(f"不存在过渡预设: {transition_name}")
-    if place_name not in presets:
-        raise ValueError(f"不存在放置预设: {place_name}")
-    if photo_name not in presets:
-        raise ValueError(f"不存在拍照预设: {photo_name}")
-    transition = presets[transition_name]
-    place = presets[place_name]
-    photo = presets[photo_name]
-
-    transition_components = transition.get("apply_components")
-    if transition_components != ["left_arm"]:
-        raise ValueError(f"过渡预设必须且只能执行left_arm: {transition_components}")
-    place_components = place.get("apply_components")
-    if not isinstance(place_components, list) or not {"torso", "left_arm"}.issubset(place_components):
-        raise ValueError(f"放置预设必须执行torso和left_arm: {place_components}")
-    photo_components = photo.get("apply_components")
-    if not isinstance(photo_components, list) or not {"torso", "left_arm"}.issubset(photo_components):
-        raise ValueError(f"拍照预设必须执行torso和left_arm: {photo_components}")
-
+def load_targets(arm: str) -> tuple[list[float], list[float], int, list[float], str, str]:
+    poses = load_capability_poses()
+    side = arm.upper()
+    arm_key = ARM_CONFIG[arm]["pose_key"]
+    ready_name = "DELIVERY_TABLE_PLACE_READY"
+    transition_name = f"DELIVERY_TABLE_PLACE_TRANSITION_{side}"
+    final_name = f"DELIVERY_TABLE_PLACE_FINAL_{side}"
+    for name in (ready_name, transition_name, final_name):
+        if name not in poses:
+            raise ValueError(f"能力位姿不存在: {name}")
+    ready, transition, final = poses[ready_name], poses[transition_name], poses[final_name]
+    for name, value in ((transition_name, transition), (final_name, final)):
+        if value.get("status") not in {"candidate", "ready"}:
+            raise ValueError(f"{name}状态不是candidate/ready: {value.get('status')}")
+    ready_pose = finite_pose(ready.get(arm_key, {}).get("pose_6d"), f"{ready_name}.{arm_key}.pose_6d")
     transition_pose = finite_pose(
-        transition.get("left_arm", {}).get("pose_6d"),
-        f"{transition_name}.left_arm.pose_6d",
+        transition.get(arm_key, {}).get("pose_6d"), f"{transition_name}.{arm_key}.pose_6d"
     )
-    recorded_place_pose = finite_pose(
-        place.get("left_arm", {}).get("pose_6d"),
-        f"{place_name}.left_arm.pose_6d",
-    )
-    photo_pose = finite_pose(photo.get("left_arm", {}).get("pose_6d"), f"{photo_name}.left_arm.pose_6d")
-    # 固定姿态放置：只采用放置预设记录的x/y/z，末端方向始终保持拍照姿态。
-    # YAML中的放置rx/ry/rz保留用于历史追溯，但本脚本不会执行它们。
-    place_pose = recorded_place_pose[:3] + photo_pose[3:]
-    place_height = int(place.get("torso", {}).get("height"))
-    photo_height = int(photo.get("torso", {}).get("height"))
-    for label, height in (("放置", place_height), ("拍照", photo_height)):
-        if not MIN_LIFT_HEIGHT_MM <= height <= MAX_LIFT_HEIGHT_MM:
-            raise ValueError(f"{label}躯干高度{height}mm超出{MIN_LIFT_HEIGHT_MM}～{MAX_LIFT_HEIGHT_MM}mm")
-    if place_height >= photo_height:
-        raise ValueError(
-            f"本流程要求先下降躯干，但放置高度{place_height}mm不低于拍照高度{photo_height}mm"
-        )
-    return transition_pose, place_pose, place_height, photo_pose, photo_height
+    final_pose = finite_pose(final.get(arm_key, {}).get("pose_6d"), f"{final_name}.{arm_key}.pose_6d")
+    heights = [ready.get("torso", {}).get("height_mm"), transition.get("torso", {}).get("height_mm"), final.get("torso", {}).get("height_mm")]
+    if any(value is None for value in heights) or len({int(value) for value in heights}) != 1:
+        raise ValueError(f"READY/TRANSITION/FINAL躯干高度不一致: {heights}")
+    place_height = int(heights[0])
+    if not MIN_LIFT_HEIGHT_MM <= place_height <= MAX_LIFT_HEIGHT_MM:
+        raise ValueError(f"放置躯干高度{place_height}mm超出允许范围")
+    return transition_pose, final_pose, place_height, ready_pose, transition_name, final_name
 
 
 def nonzero_robot_errors(value: Any) -> list[str]:
@@ -249,13 +226,18 @@ def check_lift(client: Any, expected_height: int | None = None) -> int:
 
 def check_gripper_holding(client: Any) -> Any:
     state = client.get_gripper_state()
-    if state.enable_state != 1 or state.error != 0:
+    if state.enable_state != 1 or state.status != 1 or state.error != 0:
         raise RuntimeError(f"夹爪未使能或存在错误: {state}")
-    if state.actpos >= 950:
-        raise RuntimeError(f"夹爪接近全开(actpos={state.actpos})，未确认夹持物体")
     if state.actpos <= 50:
         raise RuntimeError(f"夹爪接近全闭(actpos={state.actpos})，未确认夹到物体")
-    print(f"夹爪夹持状态: actpos={state.actpos}, force={state.current_force}, error={state.error}")
+    if state.mode != 6:
+        raise RuntimeError(
+            f"夹爪当前mode={state.mode}，未确认为力控接触保持(mode=6): {state}"
+        )
+    print(
+        f"夹爪夹持状态: actpos={state.actpos}, force={state.current_force}, "
+        f"mode={state.mode}, error={state.error}"
+    )
     return state
 
 
@@ -370,6 +352,41 @@ def confirm(exact_text: str, prompt: str) -> bool:
     return True
 
 
+def preflight_chain(client: Any, ready_pose: list[float], transition_pose: list[float], final_pose: list[float]) -> None:
+    state = client.get_state()
+    robot_errors = nonzero_robot_errors(state.err)
+    if robot_errors:
+        raise RuntimeError(f"机械臂存在错误: {', '.join(robot_errors)}")
+    stages = [
+        ("READY", ready_pose),
+        ("TRANSITION", transition_pose),
+        ("FINAL", final_pose),
+        ("TRANSITION_RETURN", transition_pose),
+        ("READY_RETURN", ready_pose),
+    ]
+    previous = [float(value) for value in state.joints]
+    solved: dict[str, list[float]] = {}
+    min_abs_j5 = float("inf")
+    print("\n========== 完整放置链只读逆解 ==========")
+    for label, pose in stages:
+        errors: list[str] = []
+        validate_pose_limits(label, pose, errors)
+        if errors:
+            raise RuntimeError("；".join(errors))
+        current = inverse_kinematics(client, previous, pose)
+        deltas = [abs(float(target) - float(source)) for source, target in zip(previous, current)]
+        maximum = max(deltas)
+        min_abs_j5 = min(min_abs_j5, abs(float(current[4])))
+        print(f"{label}: max_joint_delta={maximum:.2f}°，J5={current[4]:.2f}°，IK={current}")
+        if maximum > MAX_JOINT_DELTA_DEG:
+            raise RuntimeError(f"{label}单关节最大变化{maximum:.1f}°超过{MAX_JOINT_DELTA_DEG:.1f}°")
+        previous = current
+        solved[label] = current
+    if min_abs_j5 < 5.0:
+        raise RuntimeError(f"完整路径最小|J5|={min_abs_j5:.2f}°，低于5°实验限制")
+    print(f"[PASS] 完整正反链逆解通过，路径最小|J5|={min_abs_j5:.2f}°")
+
+
 def main() -> int:
     args = parse_args()
     if not 1.0 <= args.arm_speed <= 10.0:
@@ -379,77 +396,69 @@ def main() -> int:
     if args.arm_timeout <= 0 or args.lift_timeout <= 0:
         raise ValueError("超时时间必须大于0")
 
-    transition_pose, place_pose, place_height, photo_pose, photo_height = load_targets(
-        args.transition_preset,
-        args.place_preset,
-        args.photo_preset,
-    )
-    print("\n========== 左臂固定点放置流程 ==========")
-    print(f"配置文件: {PRESET_PATH}")
-    print(f"放置预设（本轮作为最终放置位）: {args.place_preset}")
-    print(f"放置躯干高度: {place_height}mm")
-    recorded_place_pose = load_presets()[args.place_preset]["left_arm"]["pose_6d"]
-    print(f"放置预设原始6D（仅使用xyz）: {recorded_place_pose}")
-    print(f"实际执行放置6D（xyz来自放置位，旋转来自拍照位）: {place_pose}")
-    print(f"过渡预设: {args.transition_preset}")
-    print(f"过渡左臂6D: {transition_pose}")
-    print(f"拍照预设: {args.photo_preset}")
-    print(f"拍照躯干高度: {photo_height}mm")
-    print(f"拍照左臂6D: {photo_pose}")
-    print(
-        "流程: 躯干下降 -> MoveJ_P过渡位 -> MoveJ_P最终放置位 -> 松爪 -> "
-        "MoveJ_P过渡位 -> MoveJ_P拍照位 -> 躯干上升"
-    )
+    transition_pose, place_pose, place_height, ready_pose, transition_name, final_name = load_targets(args.arm)
+    side_text = "左臂" if args.arm == "left" else "右臂"
+    side_upper = args.arm.upper()
+    print(f"\n========== {side_text}固定点放置流程 ==========")
+    print(f"配置文件: {CAPABILITY_POSE_PATH}")
+    print(f"READY 6D: {ready_pose}")
+    print(f"过渡预设: {transition_name}")
+    print(f"TRANSITION 6D: {transition_pose}")
+    print(f"最终预设: {final_name}")
+    print(f"FINAL完整6D: {place_pose}")
+    print(f"要求躯干高度: {place_height}mm")
+    print("流程: READY -> MoveJ_P过渡位 -> MoveJ_P最终放置位 -> 松爪 -> MoveJ_P过渡位 -> MoveJ_P READY")
 
     sys.path.insert(0, str(ARM_API_ROOT))
     from realman_arm_api_api2 import RealmanArmClient
 
-    client = RealmanArmClient(ip=LEFT_ARM_IP, model="left", auto_connect=False)
+    arm_ip = ARM_CONFIG[args.arm]["ip"]
+    client = RealmanArmClient(ip=arm_ip, model=args.arm, auto_connect=False)
+    lift_client = client
+    separate_lift_client = None
     try:
-        print(f"\n连接左臂: {LEFT_ARM_IP}")
+        print(f"\n连接{side_text}: {arm_ip}")
         client.connect()
+        if args.arm == "right":
+            separate_lift_client = RealmanArmClient(
+                ip=ARM_CONFIG["left"]["ip"], model="left", auto_connect=False
+            )
+            print(f"连接升降柱所属左臂控制器（仅读取高度）: {ARM_CONFIG['left']['ip']}")
+            separate_lift_client.connect()
+            lift_client = separate_lift_client
 
-        # 初始状态必须是：拍照位、拍照躯干高度、夹爪正在夹持物体。
+        # 初始状态必须是：READY、400mm放置高度、夹爪正在夹持物体。
         require_pose(
             client,
-            "启动时左臂拍照姿态",
-            photo_pose,
+            f"启动时{side_text} READY姿态",
+            ready_pose,
             START_POSITION_TOLERANCE_M,
             START_ORIENTATION_TOLERANCE_DEG,
         )
-        initial_height = check_lift(client, photo_height)
+        initial_height = check_lift(lift_client, place_height)
         check_gripper_holding(client)
-        print(f"启动状态检查通过：躯干={initial_height}mm，左臂在拍照位，夹爪已夹持")
-
-        # 阶段1：下降前，保持左臂在拍照位并再次检查夹持状态。
-        require_pose(client, "躯干下降前左臂", photo_pose, START_POSITION_TOLERANCE_M, START_ORIENTATION_TOLERANCE_DEG)
-        check_gripper_holding(client)
-        if not confirm(
-            f"LOWER TORSO {place_height}",
-            "确认躯干下降路径、夹持物和双臂周围无障碍物",
-        ):
+        print(f"启动状态检查通过：躯干={initial_height}mm，{side_text}在READY，夹爪已夹持")
+        preflight_chain(client, ready_pose, transition_pose, place_pose)
+        if args.plan_only:
+            print("\n[PLAN ONLY] 只读检查完成，不会发送运动或夹爪命令")
             return 0
-        actual_place_height = execute_lift_monitored(
-            client, place_height, args.lift_speed, args.lift_timeout, "躯干下降"
-        )
-        print(f"躯干下降完成，实际高度={actual_place_height}mm")
 
-        # 阶段2：躯干到位后，先经独立过渡姿态改变机械臂构型。
-        check_lift(client, place_height)
-        require_pose(client, "下降后左臂仍在拍照姿态", photo_pose, START_POSITION_TOLERANCE_M, START_ORIENTATION_TOLERANCE_DEG)
+        # 阶段1：READY -> TRANSITION。
+        check_lift(lift_client, place_height)
+        require_pose(client, f"{side_text} READY姿态", ready_pose, START_POSITION_TOLERANCE_M, START_ORIENTATION_TOLERANCE_DEG)
         check_gripper_holding(client)
-        check_arm_motion(client, "左臂前往过渡位", transition_pose)
+        check_arm_motion(client, f"{side_text}前往过渡位", transition_pose)
         if not confirm(
-            "MOVE LEFT TRANSITION",
+            f"MOVE {side_upper} TRANSITION",
             f"确认MoveJ_P整段路径无障碍物，以{args.arm_speed:g}%移动到过渡位",
         ):
             return 0
         actual_transition_pose = execute_movej_p_monitored(
             client, transition_pose, args.arm_speed, args.arm_timeout, "MoveJ_P过渡"
         )
-        print(f"左臂已到过渡位，实际末端6D: {actual_transition_pose}")
+        print(f"{side_text}已到过渡位，实际末端6D: {actual_transition_pose}")
 
-        # 阶段3：从实际过渡位重新解算最终固定方向放置目标。
+        # 阶段2：TRANSITION -> FINAL。
         require_pose(
             client,
             "前往最终放置位前的过渡姿态",
@@ -457,86 +466,75 @@ def main() -> int:
             ARM_POSITION_TOLERANCE_M,
             ARM_ORIENTATION_TOLERANCE_DEG,
         )
-        check_lift(client, place_height)
+        check_lift(lift_client, place_height)
         check_gripper_holding(client)
-        check_arm_motion(client, "左臂从过渡位前往最终放置位", place_pose)
+        check_arm_motion(client, f"{side_text}从过渡位前往最终放置位", place_pose)
         if not confirm(
-            "MOVE LEFT PLACE",
+            f"MOVE {side_upper} PLACE",
             f"确认过渡位到最终放置位路径无障碍物，以{args.arm_speed:g}%执行MoveJ_P",
         ):
             return 0
         actual_place_pose = execute_movej_p_monitored(
             client, place_pose, args.arm_speed, args.arm_timeout, "MoveJ_P放置"
         )
-        print(f"左臂已到放置位，实际末端6D: {actual_place_pose}")
+        print(f"{side_text}已到放置位，实际末端6D: {actual_place_pose}")
 
         # 阶段4：松爪不是机械臂运动，但仍需检查最终位姿、高度、错误和夹持状态。
         require_pose(client, "松爪前放置姿态", place_pose, ARM_POSITION_TOLERANCE_M, ARM_ORIENTATION_TOLERANCE_DEG)
-        check_lift(client, place_height)
+        check_lift(lift_client, place_height)
         check_gripper_holding(client)
         if not confirm(
-            "RELEASE LEFT OBJECT",
+            f"RELEASE {side_upper} OBJECT",
             "确认物体已由桌面可靠承托、打开夹爪不会导致物体跌落",
         ):
             return 0
         released = release_gripper_monitored(client)
         print(f"物体已松开，夹爪状态: {released}")
 
-        # 阶段5：松爪后先按反向链返回过渡位。
+        # 阶段3：松爪后按反向链返回过渡位。
         require_pose(client, "回退前放置姿态", place_pose, ARM_POSITION_TOLERANCE_M, ARM_ORIENTATION_TOLERANCE_DEG)
-        check_lift(client, place_height)
-        check_arm_motion(client, "左臂从最终放置位返回过渡位", transition_pose)
+        check_lift(lift_client, place_height)
+        check_arm_motion(client, f"{side_text}从最终放置位返回过渡位", transition_pose)
         if not confirm(
-            "RETURN LEFT TRANSITION",
+            f"RETURN {side_upper} TRANSITION",
             f"确认最终放置位到过渡位路径无障碍物，以{args.arm_speed:g}%执行MoveJ_P",
         ):
             return 0
         actual_return_transition = execute_movej_p_monitored(
             client, transition_pose, args.arm_speed, args.arm_timeout, "MoveJ_P返回过渡位"
         )
-        print(f"左臂已返回过渡位，实际末端6D: {actual_return_transition}")
+        print(f"{side_text}已返回过渡位，实际末端6D: {actual_return_transition}")
 
-        # 阶段6：从实际过渡位重新检查并回到拍照位。
+        # 阶段4：TRANSITION -> READY。
         require_pose(
             client,
-            "返回拍照位前的过渡姿态",
+            "返回READY前的过渡姿态",
             transition_pose,
             ARM_POSITION_TOLERANCE_M,
             ARM_ORIENTATION_TOLERANCE_DEG,
         )
-        check_lift(client, place_height)
-        check_arm_motion(client, "左臂从过渡位返回拍照位", photo_pose)
+        check_lift(lift_client, place_height)
+        check_arm_motion(client, f"{side_text}从过渡位返回READY", ready_pose)
         if not confirm(
-            "RETURN LEFT PHOTO",
-            f"确认过渡位到拍照位路径无障碍物，以{args.arm_speed:g}%返回拍照姿态",
+            f"RETURN {side_upper} READY",
+            f"确认过渡位到READY路径无障碍物，以{args.arm_speed:g}%返回",
         ):
             return 0
-        actual_photo_pose = execute_movej_p_monitored(
-            client, photo_pose, args.arm_speed, args.arm_timeout, "MoveJ_P回拍照位"
+        actual_ready_pose = execute_movej_p_monitored(
+            client, ready_pose, args.arm_speed, args.arm_timeout, "MoveJ_P回READY"
         )
-        print(f"左臂已回拍照位，实际末端6D: {actual_photo_pose}")
-
-        # 阶段7：只有左臂确认收回后才允许躯干上升。
-        require_pose(client, "躯干上升前左臂拍照姿态", photo_pose, ARM_POSITION_TOLERANCE_M, ARM_ORIENTATION_TOLERANCE_DEG)
-        check_lift(client, place_height)
-        if not confirm(
-            f"RAISE TORSO {photo_height}",
-            "确认左臂已收回，躯干上升路径及机器人周围无障碍物",
-        ):
-            return 0
-        actual_photo_height = execute_lift_monitored(
-            client, photo_height, args.lift_speed, args.lift_timeout, "躯干上升"
-        )
-
-        require_pose(client, "流程结束左臂拍照姿态", photo_pose, ARM_POSITION_TOLERANCE_M, ARM_ORIENTATION_TOLERANCE_DEG)
-        check_lift(client, photo_height)
+        print(f"{side_text}已回READY，实际末端6D: {actual_ready_pose}")
+        require_pose(client, f"流程结束{side_text} READY姿态", ready_pose, ARM_POSITION_TOLERANCE_M, ARM_ORIENTATION_TOLERANCE_DEG)
+        check_lift(lift_client, place_height)
         final_gripper = client.get_gripper_state()
         if final_gripper.error != 0 or final_gripper.actpos < 990:
             raise RuntimeError(f"流程结束夹爪状态异常: {final_gripper}")
         print("\n[COMPLETE] 放置流程完成")
-        print(f"躯干已恢复至{actual_photo_height}mm，左臂已回拍照姿态，夹爪保持打开")
+        print(f"躯干保持{place_height}mm，{side_text}已回READY，夹爪保持打开")
         return 0
     finally:
+        if separate_lift_client is not None:
+            separate_lift_client.disconnect()
         client.disconnect()
 
 

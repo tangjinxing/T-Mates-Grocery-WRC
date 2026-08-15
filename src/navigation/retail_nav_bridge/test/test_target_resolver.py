@@ -92,3 +92,18 @@ def test_business_aliases_and_direct_station_ids(resolver):
 def test_invalid_or_unmapped_target_is_rejected(resolver, target_id):
     with pytest.raises(TargetResolutionError):
         resolver.resolve(target_id)
+
+
+def test_hotel1_c01_c03_left_c04_right():
+    config = Path(__file__).resolve().parents[1] / "config"
+    hotel = load_target_resolver(
+        config / "product_slot_navigation.yaml",
+        config / "retail_stations.yaml",
+    )
+    assert hotel.resolve("H1_F_L1_C01") == "mark_5"
+    assert hotel.resolve("H1_F_L1_C03") == "mark_5"
+    assert hotel.resolve("H1_F_L1_C04") == "mark_4"
+    assert hotel.resolve("H1_F_L1_C06") == "mark_4"
+    assert hotel.resolve("H1_B_L3_C03") == "mark_2"
+    assert hotel.resolve("H1_B_L3_C04") == "mark_3"
+    assert hotel.resolve("H1_B_L3_C06") == "mark_3"

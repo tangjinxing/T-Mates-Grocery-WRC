@@ -15,9 +15,22 @@ CHASSIS_IP="${CHASSIS_IP:-169.254.128.2}"
 ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 HTTP_PORT="${HTTP_PORT:-8081}"
 HTTP_URL="http://127.0.0.1:${HTTP_PORT}"
+CAMERA_PORT="${CAMERA_PORT:-8083}"
+CAMERA_URL="http://127.0.0.1:${CAMERA_PORT}"
+CAMERA_DIR="$WRC_ROOT/src/parse_receipt"
+RGBD_PORT="${RGBD_PORT:-8085}"
+RGBD_URL="http://127.0.0.1:${RGBD_PORT}"
+POSE_PORT="${POSE_PORT:-8099}"
+POSE_URL="http://127.0.0.1:${POSE_PORT}"
+POSE_DIR="$WRC_ROOT/src/capability_api"
+CONDA_SH="${CONDA_SH:-/home/lh/miniconda3/etc/profile.d/conda.sh}"
+CONDA_ENV="${CONDA_ENV:-hand_eye_calib}"
 
 AGENT_PID_FILE="$RUN_DIR/agent.pid"
 BRIDGE_PID_FILE="$RUN_DIR/bridge.pid"
+CAMERA_PID_FILE="$RUN_DIR/camera.pid"
+RGBD_PID_FILE="$RUN_DIR/camera_rgbd.pid"
+POSE_PID_FILE="$RUN_DIR/pose.pid"
 
 setup_ros_env() {
     # ROS setup.bash references optional vars; disable nounset while sourcing.
@@ -53,6 +66,12 @@ wait_for_http() {
 
 fetch_health_status() {
     curl_noproxy -sf -m 3 "$HTTP_URL/navigation/health" \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null \
+        || true
+}
+
+fetch_pose_health_status() {
+    curl_noproxy -sf -m 3 "$POSE_URL/pose/health" \
         | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))' 2>/dev/null \
         || true
 }

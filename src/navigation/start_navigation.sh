@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-click start: agent (A) + bridge (B) + Init/Relocate (C).
+# One-click start: camera + RGB-D + pose API + agent (A) + bridge (B) + Init/Relocate (C).
 # HTTP gateway: GET /navigation/health, POST /navigation/navigate
+# Camera HTTP: GET /health, GET /camera/snapshot?camera=head&type=color
+# RGB-D HTTP: GET /health, GET /camera/rgbd?camera=left|right
+# Pose API: GET /pose/health, POST /pose/prepare
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=nav_common.sh
@@ -49,7 +52,7 @@ fi
 ensure_dirs
 setup_ros_env
 
-if is_running_pid "$AGENT_PID_FILE" || is_running_pid "$BRIDGE_PID_FILE"; then
+if is_running_pid "$AGENT_PID_FILE" || is_running_pid "$BRIDGE_PID_FILE" || is_running_pid "$CAMERA_PID_FILE" || is_running_pid "$RGBD_PID_FILE" || is_running_pid "$POSE_PID_FILE"; then
     echo "[error] navigation stack already running; use stop_navigation.sh first" >&2
     exit 1
 fi
@@ -60,6 +63,95 @@ for required in "$PARAMS_FILE" "$STATIONS_FILE" "$TARGET_MAPPING_FILE"; do
         exit 1
     fi
 done
+
+if [[ ! -f "$CONDA_SH" ]]; then
+    echo "[error] conda.sh not found: $CONDA_SH" >&2
+    exit 1
+fi
+if [[ ! -f "$CAMERA_DIR/camera_snapshot_server.py" ]]; then
+    echo "[error] missing camera server: $CAMERA_DIR/camera_snapshot_server.py" >&2
+    exit 1
+fi
+if [[ ! -f "$CAMERA_DIR/camera_rgbd_server.py" ]]; then
+    echo "[error] missing RGB-D camera server: $CAMERA_DIR/camera_rgbd_server.py" >&2
+    exit 1
+fi
+if [[ ! -f "$POSE_DIR/app.py" ]]; then
+    echo "[error] missing pose API: $POSE_DIR/app.py" >&2
+    exit 1
+fi
+
+echo "=== [0] start head camera HTTP bridge ==="
+(
+    set +u
+    # shellcheck source=/dev/null
+    source "$CONDA_SH"
+    conda activate "$CONDA_ENV"
+    set -u
+    cd "$CAMERA_DIR"
+    exec python camera_snapshot_server.py
+) >"$LOG_DIR/camera.log" 2>&1 &
+echo "$!" >"$CAMERA_PID_FILE"
+echo "camera pid $(cat "$CAMERA_PID_FILE"), log: $LOG_DIR/camera.log"
+
+echo "=== wait for camera ${CAMERA_URL}/health ==="
+if ! wait_for_http "${CAMERA_URL}/health" 30; then
+    echo "[error] camera HTTP bridge not responding on port ${CAMERA_PORT}" >&2
+    echo "        see $LOG_DIR/camera.log" >&2
+    exit 1
+fi
+echo "[ok] camera HTTP bridge listening"
+
+echo "=== [0a] start RGB-D camera HTTP bridge ==="
+(
+    set +u
+    # shellcheck source=/dev/null
+    source "$CONDA_SH"
+    conda activate "$CONDA_ENV"
+    set -u
+    cd "$CAMERA_DIR"
+    exec python camera_rgbd_server.py
+) >"$LOG_DIR/camera_rgbd.log" 2>&1 &
+echo "$!" >"$RGBD_PID_FILE"
+echo "rgbd pid $(cat "$RGBD_PID_FILE"), log: $LOG_DIR/camera_rgbd.log"
+
+echo "=== wait for RGB-D ${RGBD_URL}/health ==="
+if ! wait_for_http "${RGBD_URL}/health" 30; then
+    echo "[error] RGB-D camera HTTP bridge not responding on port ${RGBD_PORT}" >&2
+    echo "        see $LOG_DIR/camera_rgbd.log" >&2
+    exit 1
+fi
+echo "[ok] RGB-D camera HTTP bridge listening"
+
+echo "=== [0b] start capability pose API ==="
+(
+    set +u
+    # shellcheck source=/dev/null
+    source "$CONDA_SH"
+    conda activate "$CONDA_ENV"
+    set -u
+    cd "$POSE_DIR"
+    exec python app.py
+) >"$LOG_DIR/pose.log" 2>&1 &
+echo "$!" >"$POSE_PID_FILE"
+echo "pose pid $(cat "$POSE_PID_FILE"), log: $LOG_DIR/pose.log"
+
+echo "=== wait for pose ${POSE_URL}/pose/health ==="
+pose_ready=0
+for _ in $(seq 1 90); do
+    pose_status="$(fetch_pose_health_status)"
+    if [[ "$pose_status" == "READY" ]]; then
+        pose_ready=1
+        break
+    fi
+    sleep 1
+done
+if [[ "$pose_ready" -ne 1 ]]; then
+    echo "[error] pose API not READY on port ${POSE_PORT}" >&2
+    echo "        see $LOG_DIR/pose.log" >&2
+    exit 1
+fi
+echo "[ok] pose API READY"
 
 echo "=== [A] start woosh agent ==="
 nohup ros2 run woosh_robot_agent agent --ros-args \
@@ -138,8 +230,12 @@ echo "HTTP health : curl --noproxy '*' ${HTTP_URL}/navigation/health"
 echo "HTTP navigate: curl --noproxy '*' -X POST ${HTTP_URL}/navigation/navigate \\"
 echo "  -H 'Content-Type: application/json' -H 'Idempotency-Key: nav-001' \\"
 echo "  -d '{\"target_id\":\"mark_0\"}'"
+echo "Camera health: curl --noproxy '*' ${CAMERA_URL}/health"
+echo "RGB-D health : curl --noproxy '*' ${RGBD_URL}/health"
+echo "RGB-D capture: curl --noproxy '*' '${RGBD_URL}/camera/rgbd?camera=right'"
+echo "Pose health  : curl --noproxy '*' ${POSE_URL}/pose/health"
 echo "Stop        : bash $SCRIPT_DIR/stop_navigation.sh"
-echo "Logs        : $LOG_DIR/agent.log , $LOG_DIR/bridge.log"
+echo "Logs        : $LOG_DIR/agent.log , $LOG_DIR/bridge.log , $LOG_DIR/camera.log , $LOG_DIR/camera_rgbd.log , $LOG_DIR/pose.log"
 
 final_status="$(fetch_health_status)"
 echo "Current health: ${final_status:-unknown}"

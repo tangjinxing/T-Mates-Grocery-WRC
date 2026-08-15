@@ -1,0 +1,16 @@
+schema_version: 1
+
+pose_prepare:
+  arm_movej_p_speed_percent: 35
+  lift_speed: 35
+
+grasp:
+  pregrasp_movej_p_speed_percent: 35
+  approach_movel_speed_percent: 15
+  return_movel_speed_percent: 35
+  return_movej_p_speed_percent: 35
+  gripper_speed: 100
+  gripper_force: 300
+
+release:
+  movej_p_speed_percent: 35

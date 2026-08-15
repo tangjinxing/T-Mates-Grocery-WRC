@@ -1,0 +1,21 @@
+schema_version: 1
+
+gripper_startup:
+  enabled: true
+  allow_set_24v: true
+  open_on_startup: true
+  voltage_type: 3
+  route_min: 0
+  route_max: 1000
+  open_speed: 100
+  command_timeout_s: 10
+  verify_timeout_s: 8.0
+  verify_poll_s: 0.5
+  minimum_open_position: 990
+  arms:
+    left:
+      ip: 169.254.128.18
+      model: left
+    right:
+      ip: 169.254.128.19
+      model: right
